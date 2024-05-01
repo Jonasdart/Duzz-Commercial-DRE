@@ -171,7 +171,7 @@ if report_month:
     c1, c2 = st.columns(2, gap="large")
 
     with c1:
-        st.header("DRE DUGOLE")
+        st.header("DRE DUZZ COMMERCIAL")
         st.table(df)
         c_c1, c_c2 = c1.columns(2, gap="medium")
         with c_c1:
