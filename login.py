@@ -3,6 +3,8 @@ import streamlit as st
 
 from helpers.api import get_token
 
+st.set_page_config("DRE", layout="wide")
+
 username = st.text_input("Informe seu Login")
 password = st.text_input("Informe sua senha", type="password")
 company = st.text_input("Informe o ID da empresa")
@@ -16,5 +18,5 @@ if username and password and company:
         st.success("Logado com sucesso", icon="✅")
         sleep(1)
         st.session_state.company = company
-        st.session_state.session_token=session_token
+        st.session_state.session_token = session_token
         st.switch_page("pages/main.py")

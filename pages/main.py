@@ -24,7 +24,9 @@ def get_payments(month: date) -> List[Payment]:
     payments_data = rq.get(
         base_url + "/payments",
         params=parameters,
-        headers=get_headers(st.session_state["company"], st.session_state["session_token"]),
+        headers=get_headers(
+            st.session_state["company"], st.session_state["session_token"]
+        ),
     )
 
     if payments_data.status_code == 404:
@@ -45,7 +47,9 @@ def get_stocks():
     stocks_list = rq.get(
         base_url + "/stock",
         params=parameters,
-        headers=get_headers(st.session_state["company"], st.session_state["session_token"]),
+        headers=get_headers(
+            st.session_state["company"], st.session_state["session_token"]
+        ),
     )
 
     if stocks_list.status_code == 404:
@@ -70,7 +74,9 @@ def get_sales(month: date) -> List[Sale]:
     sales_data = rq.get(
         base_url + "/sales",
         params=parameters,
-        headers=get_headers(st.session_state["company"], st.session_state["session_token"]),
+        headers=get_headers(
+            st.session_state["company"], st.session_state["session_token"]
+        ),
     )
 
     if sales_data.status_code == 404:
@@ -106,7 +112,7 @@ def get_faturamento_data(months):
                 stock.start_date.date() > month
                 and stock.start_date.date()
                 <= month.replace(day=calendar.monthrange(month.year, month.month)[-1])
-            ):
+            ) or not stock.due_date:
                 cmv += stock.cmv
 
         for payment in competence_payments:
@@ -134,72 +140,73 @@ def get_faturamento_data(months):
     return faturamento
 
 
-if __name__ == "__main__":
-    st.set_page_config("DRE", layout="wide")
+st.set_page_config("DRE", layout="wide")
+if not st.session_state.get("company") or not st.session_state.get("session_token"):
+    st.switch_page("login.py")
 
-    months = [date(2024, month + 1, 1) for month in range(date.today().month)]
-    report_month = st.multiselect(
-        "", months, placeholder="Selecione um mês de competência"
+
+months = [date(2024, month + 1, 1) for month in range(date.today().month)]
+report_month = st.multiselect("", months, placeholder="Selecione um mês de competência")
+
+report_month.sort()
+
+if report_month:
+    df = pd.DataFrame(get_faturamento_data(report_month))
+    df.loc["acumulado"] = df.select_dtypes(np.number).sum()
+
+    despesas_admnistrativas = df["despesas"]["acumulado"]
+    despesas_cmv = df["cmv"]["acumulado"]
+    lucro_bruto = df["receitas"]["acumulado"]
+    descontos_totais = df["descontos"]["acumulado"]
+
+    despesas_totais = (
+        despesas_admnistrativas + despesas_cmv + descontos_totais
     )
-    
-    report_month.sort()
 
-    if report_month:
-        df = pd.DataFrame(get_faturamento_data(report_month))
-        df.loc["acumulado"] = df.select_dtypes(np.number).sum()
+    lucro_liquido = lucro_bruto - despesas_totais
+    discount_percent = (
+        descontos_totais / lucro_bruto if lucro_bruto else 1
+    ) * 100
 
-        despesas_admnistrativas = df["despesas"]["acumulado"]
-        despesas_cmv = df["cmv"]["acumulado"]
-        lucro_bruto = df["receitas"]["acumulado"]
+    c1, c2 = st.columns(2, gap="large")
 
-        despesas_totais = (
-            despesas_admnistrativas + despesas_cmv + df["descontos"]["acumulado"]
+    with c1:
+        st.header("DRE DUGOLE")
+        st.table(df)
+        c_c1, c_c2 = c1.columns(2, gap="medium")
+        with c_c1:
+            tile = c_c1.container(height=120)
+            tile.metric(
+                "Lucro Liquido",
+                value=f"R$ {round(lucro_liquido, 2)}",
+                delta=f"{round((lucro_liquido / lucro_bruto if lucro_bruto else 1) * 100)} %",
+            )
+            tile = c_c1.container(height=120)
+            tile.metric(
+                "Receitas - Despesas",
+                value=f"R$ {round(lucro_bruto - despesas_admnistrativas, 2)}",
+                delta=f"{round((lucro_bruto / despesas_admnistrativas if despesas_admnistrativas else 1))} %",
+                delta_color="normal",
+            )
+        with c_c2:
+            tile = c_c2.container(height=120)
+            tile.metric(
+                "Descontos sobre Receita",
+                value=f"R$ {round(descontos_totais, 2)}",
+                delta=f"{round(discount_percent, 2)} %",
+                delta_color="off",
+            )
+
+    with c2:
+        st.bar_chart(
+            df,
+            color=("#FF5F35", "#FCAF19", "#EF4854", "#70F06D"),
+            width=500,
+            use_container_width=False,
         )
-
-        lucro_liquido = lucro_bruto - despesas_totais
-        discount_percent = (
-            df["descontos"]["acumulado"] / df["receitas"]["acumulado"]
-        ) * 100
-
-        c1, c2 = st.columns(2, gap="large")
-
-        with c1:
-            st.header("DRE DUGOLE")
-            st.table(df)
-            c_c1, c_c2 = c1.columns(2, gap="medium")
-            with c_c1:
-                tile = c_c1.container(height=120)
-                tile.metric(
-                    "Lucro Liquido",
-                    value=f"R$ {round(lucro_liquido, 2)}",
-                    delta=f"{round((lucro_liquido / lucro_bruto) * 100)} %",
-                )
-                tile = c_c1.container(height=120)
-                tile.metric(
-                    "Receitas - Despesas",
-                    value=f"R$ {round(lucro_bruto - despesas_admnistrativas, 2)}",
-                    delta=f"{round((lucro_bruto / despesas_admnistrativas))} %",
-                    delta_color="normal",
-                )
-            with c_c2:
-                tile = c_c2.container(height=120)
-                tile.metric(
-                    "Descontos s/ Receita",
-                    value=f"R$ {round(df['descontos']['acumulado'], 2)}",
-                    delta=f"{round(discount_percent, 2)} %",
-                    delta_color="off",
-                )
-
-        with c2:
-            st.bar_chart(
-                df,
-                color=("#FF5F35", "#FCAF19", "#EF4854", "#70F06D"),
-                width=500,
-                use_container_width=False,
-            )
-            st.area_chart(
-                df,
-                color=("#FF5F35", "#FCAF19", "#EF4854", "#70F06D"),
-                width=500,
-                use_container_width=False,
-            )
+        st.area_chart(
+            df,
+            color=("#FF5F35", "#FCAF19", "#EF4854", "#70F06D"),
+            width=500,
+            use_container_width=False,
+        )
