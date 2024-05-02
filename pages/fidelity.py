@@ -1,5 +1,6 @@
 import calendar
 from datetime import date, datetime, timedelta
+import math
 from typing import Dict, List
 
 import pandas as pd
@@ -66,6 +67,7 @@ def get_subscribers(plan: Plan) -> List[Subscriber]:
         subscriber["promotion"] = plan.promotion
 
     subscribers = [Subscriber(**subscriber) for subscriber in subscribers]
+    subscribers.sort(key=lambda subscriber: subscriber.moment)
 
     return subscribers
 
@@ -128,29 +130,107 @@ def get_subscriber_consume(shopps: List[Sale]) -> float:
 
 if __name__ == "__main__":
     plans = get_fidelity_plans()
+    resume = {
+        plan.id: {
+            "limite": {},
+            "consumo": {},
+        }
+        for plan in plans
+    }
+    consumo_restante = {
+        plan.id: {
+            "Consumido": {},
+            "ML": {},
+            "Litros": {},
+            "Garrafa": {},
+            "Piriguete": {},
+            "Latão": {},
+            "Latinha": {},
+            "Refri 2L": {},
+            "Refri Pitchulinha": {},
+            "Redbull": {},
+        }
+        for plan in plans
+    }
     if plans:
-        with st.expander("Ver Planos"):
-            st.table([plan.model_dump() for plan in plans])
-
-        tabs = st.tabs([plan.name for plan in plans])
-
-        for tab, plan in enumerate(plans):
-            resume = {
-                "limite": {},
-                "consumo": {},
-            }
+        for plan in plans:
             categorias = {"categoria": {}, "consumo": {}}
             produtos = {"produtos": {}, "consumo": {}}
-            with tabs[tab]:
-                subscribers = get_subscribers(plan)
-                # st.table([subscriber.model_dump(exclude={'customer': {'id', 'email', 'last_name', 'whatsapp'}}) for subscriber in subscribers])
-                if subscribers:
-                    for subscriber in subscribers:
-                        subscriber_name = f"{subscriber.customer.name} {subscriber.customer.last_name}"
-                        shopps = get_subscriber_shopps(subscriber)
-                        consume = get_subscriber_consume(shopps)
-                        resume["limite"][subscriber_name] = plan.limit
-                        resume["consumo"][subscriber_name] = consume
-                tabs[tab].area_chart(pd.DataFrame(resume))
-                tabs[tab].scatter_chart(pd.DataFrame(resume))
-                
+            subscribers = get_subscribers(plan)
+            # subscribers = st.multiselect(
+            #     "",
+            #     subscribers,
+            #     default=subscribers,
+            #     placeholder="Selecione um cliente de competência",
+            #     format_func=lambda s: f"{s.customer.name} {s.customer.last_name}",
+            # )
+            if subscribers:
+                for subscriber in subscribers:
+                    subscriber_name = (
+                        f"{subscriber.customer.name} {subscriber.customer.last_name}"
+                    )
+                    shopps = get_subscriber_shopps(subscriber)
+                    consume = get_subscriber_consume(shopps)
+                    resume[plan.id]["limite"][subscriber_name] = plan.limit
+                    resume[plan.id]["consumo"][subscriber_name] = consume
+
+                    _consumo_restante = plan.limit - consume
+
+                    consumo_restante[plan.id]["Consumido"][subscriber_name] = round(
+                        consume
+                    )
+                    consumo_restante[plan.id]["ML"][subscriber_name] = round(
+                        _consumo_restante
+                    )
+                    consumo_restante[plan.id]["Litros"][subscriber_name] = round(
+                        _consumo_restante / 1000
+                    )
+                    consumo_restante[plan.id]["Garrafa"][subscriber_name] = math.ceil(
+                        _consumo_restante / 600
+                    )
+                    consumo_restante[plan.id]["Piriguete"][subscriber_name] = math.ceil(
+                        _consumo_restante / 300
+                    )
+                    consumo_restante[plan.id]["Latão"][subscriber_name] = math.ceil(
+                        _consumo_restante / 473
+                    )
+                    consumo_restante[plan.id]["Latinha"][subscriber_name] = math.ceil(
+                        _consumo_restante / 350
+                    )
+                    consumo_restante[plan.id]["Refri 2L"][subscriber_name] = round(
+                        _consumo_restante / 2000
+                    )
+                    consumo_restante[plan.id]["Refri Pitchulinha"][
+                        subscriber_name
+                    ] = math.ceil(_consumo_restante / 200)
+                    consumo_restante[plan.id]["Redbull"][subscriber_name] = math.ceil(
+                        _consumo_restante / 250
+                    )
+
+        st.table([plan.model_dump() for plan in plans])
+
+        if resume and consumo_restante:
+            with st.expander("Assinantes"):
+                tabs = st.tabs([plan.name for plan in plans])
+                for tab, plan in enumerate(plans):
+                    # tabs[tab].table(pd.DataFrame(consumo_restante[plan.id]))
+                    tabs[tab].data_editor(
+                        consumo_restante[plan.id],
+                        column_config={
+                            "Consumido": st.column_config.ProgressColumn(
+                                "Total Consumido",
+                                help="Total Consumido do Plano",
+                                format="%f ML",
+                                min_value=0,
+                                max_value=plan.limit,
+                                width="large",
+                            ),
+                        },
+                    )
+                    tabs[tab].scatter_chart(pd.DataFrame(resume[plan.id]))
+
+        if resume:
+            with st.expander("Visão Geral"):
+                tabs = st.tabs([plan.name for plan in plans])
+                for tab, plan in enumerate(plans):
+                    tabs[tab].area_chart(pd.DataFrame(resume[plan.id]))
