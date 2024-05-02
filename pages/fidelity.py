@@ -158,13 +158,6 @@ if __name__ == "__main__":
             categorias = {"categoria": {}, "consumo": {}}
             produtos = {"produtos": {}, "consumo": {}}
             subscribers = get_subscribers(plan)
-            # subscribers = st.multiselect(
-            #     "",
-            #     subscribers,
-            #     default=subscribers,
-            #     placeholder="Selecione um cliente de competência",
-            #     format_func=lambda s: f"{s.customer.name} {s.customer.last_name}",
-            # )
             if subscribers:
                 for subscriber in subscribers:
                     subscriber_name = (
@@ -208,8 +201,6 @@ if __name__ == "__main__":
                         _consumo_restante / 250
                     )
 
-        st.table([plan.model_dump() for plan in plans])
-
         if resume and consumo_restante:
             with st.expander("Assinantes"):
                 tabs = st.tabs([plan.name for plan in plans])
@@ -232,6 +223,11 @@ if __name__ == "__main__":
 
         if resume:
             with st.expander("Visão Geral"):
+                tile = st.container(border=True)
+                tile.metric("Total de Assinantes", sum([len(resume[sub]["consumo"].keys()) for sub in resume]))
+                
                 tabs = st.tabs([plan.name for plan in plans])
                 for tab, plan in enumerate(plans):
+                    tile = tabs[tab].container(border=True)
+                    tile.metric(f"Total de Assinantes: {plan.name}", len(resume[plan.id]["consumo"].keys()))
                     tabs[tab].area_chart(pd.DataFrame(resume[plan.id]))
