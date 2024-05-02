@@ -11,6 +11,8 @@ from models.customers import Customer
 from models.plans import Plan, Subscriber
 from models.sales import Product, Sale
 
+products_data: Dict[str, Product] = {}
+
 st.set_page_config("DRE", layout="wide")
 if not st.session_state.get("company") or not st.session_state.get("session_token"):
     st.switch_page("login.py")
@@ -115,7 +117,6 @@ def get_product_data(product_id: int) -> Product:
 
 
 def get_subscriber_consume(shopps: List[Sale]) -> float:
-    products_data: Dict[str, Product] = {}
     consume = 0
     for shopp in shopps:
         products = shopp.products
