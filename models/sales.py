@@ -24,3 +24,9 @@ class Sale(BaseSchema):
     @classmethod
     def parse_moment(cls, done_str: str) -> datetime:
         return datetime.strptime(done_str, "%d-%m-%Y %H:%M:%S")
+
+
+class Product(BaseSchema):
+    id: int
+    size: float
+    price: Optional[float]

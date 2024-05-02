@@ -22,3 +22,10 @@ class PaymentsMethods(Enum):
     CARNE: str = "7"
     VALE: str = "8"
     DESCONTO: str = "9"
+
+
+class PlansPromotions(Enum):
+    DUPLINHA: int = 13
+    DUGOLE: int = 14
+    COMERCIAL: int = 15
+    CABECA_BRANCA: int = 16

@@ -90,7 +90,7 @@ def get_sales(month: date) -> List[Sale]:
     return [Sale(**sale) for sale in sales_data]
 
 
-def get_faturamento_data(months):
+def get_faturamento_data(months: List[date]):
     faturamento = {
         "despesas": {},
         "cmv": {},
@@ -109,10 +109,16 @@ def get_faturamento_data(months):
 
         for stock in all_stocks:
             if (
-                stock.start_date.date() > month
-                and stock.start_date.date()
-                <= month.replace(day=calendar.monthrange(month.year, month.month)[-1])
-            ) or not stock.due_date:
+                stock.due_date
+                and stock.due_date.date() > month
+                and stock.due_date.date()
+                < month.replace(day=calendar.monthrange(month.year, month.month)[-1])
+            ):
+                # if (
+                #     stock.start_date.date() > month or not stock.due_date
+                # ) and stock.start_date.date() <= month.replace(
+                #     day=calendar.monthrange(month.year, month.month)[-1]
+                # ):
                 cmv += stock.cmv
 
         for payment in competence_payments:
@@ -145,8 +151,11 @@ if not st.session_state.get("company") or not st.session_state.get("session_toke
     st.switch_page("login.py")
 
 
-months = [date(2024, month + 1, 1) for month in range(date.today().month)]
-report_month = st.multiselect("", months, placeholder="Selecione um mês de competência")
+months = [date(2023, month + 1, 1) for month in range(12)]
+months.extend([date(2024, month + 1, 1) for month in range(date.today().month)])
+report_month = st.multiselect(
+    "", months, default=months[-1], placeholder="Selecione um mês de competência"
+)
 
 report_month.sort()
 
@@ -159,14 +168,10 @@ if report_month:
     lucro_bruto = df["receitas"]["acumulado"]
     descontos_totais = df["descontos"]["acumulado"]
 
-    despesas_totais = (
-        despesas_admnistrativas + despesas_cmv + descontos_totais
-    )
+    despesas_totais = despesas_admnistrativas + despesas_cmv + descontos_totais
 
     lucro_liquido = lucro_bruto - despesas_totais
-    discount_percent = (
-        descontos_totais / lucro_bruto if lucro_bruto else 1
-    ) * 100
+    discount_percent = (descontos_totais / lucro_bruto if lucro_bruto else 1) * 100
 
     c1, c2 = st.columns(2, gap="large")
 
