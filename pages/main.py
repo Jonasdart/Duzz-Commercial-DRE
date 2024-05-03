@@ -228,7 +228,7 @@ if report_month:
             )
             tile = c_c2.container(height=120)
             tile.metric(
-                "Margem sobre vendas",
+                "Margem sobre o CMV",
                 value=f"R$ {round((lucro_bruto - descontos_totais) - despesas_cmv, 2)}",
                 delta=f"{round(despesas_cmv / (lucro_bruto - descontos_totais), 2)} %",
             )
