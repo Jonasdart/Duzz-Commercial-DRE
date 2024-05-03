@@ -3,6 +3,8 @@ import calendar
 import decimal
 from functools import lru_cache
 from typing import List
+
+from requests import HTTPError
 from helpers.api import rq, base_url, get_headers
 from models.enums import ReferenceTable
 from models.payments import Payment
@@ -12,6 +14,19 @@ import numpy as np
 
 from models.sales import Sale
 from models.stocks import Stock
+
+
+st.set_page_config("DRE", layout="wide")
+if not st.query_params.get("company") or not st.query_params.get("session_token"):
+    print(st.query_params)
+    try:
+        st.query_params.company = st.session_state.company
+        st.query_params.session_token = st.session_state.session_token
+    except:
+        st.switch_page("login.py")
+else:
+    st.session_state.company = st.query_params.company
+    st.session_state.session_token= st.query_params.session_token
 
 
 @lru_cache
@@ -55,6 +70,7 @@ def get_stocks():
     if stocks_list.status_code == 404:
         stocks_list = []
     else:
+        stocks_list.raise_for_status()
         stocks_list = stocks_list.json()
 
     for stock in stocks_list:
@@ -146,11 +162,6 @@ def get_faturamento_data(months: List[date]):
     return faturamento
 
 
-st.set_page_config("DRE", layout="wide")
-if not st.session_state.get("company") or not st.session_state.get("session_token"):
-    st.switch_page("login.py")
-
-
 months = [date(2023, month + 1, 1) for month in range(12)]
 months.extend([date(2024, month + 1, 1) for month in range(date.today().month)])
 report_month = st.multiselect(
@@ -160,7 +171,13 @@ report_month = st.multiselect(
 report_month.sort()
 
 if report_month:
-    df = pd.DataFrame(get_faturamento_data(report_month))
+    try:
+        df = pd.DataFrame(get_faturamento_data(report_month))
+    except HTTPError as e:
+        if e.response.status_code == 401:
+            st.switch_page("login.py")
+        raise e
+
     df.loc["acumulado"] = df.select_dtypes(np.number).sum()
 
     despesas_admnistrativas = df["despesas"]["acumulado"]

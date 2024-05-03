@@ -4,6 +4,7 @@ import math
 from typing import Dict, List
 
 import pandas as pd
+from requests import HTTPError
 from helpers.api import rq, base_url, get_headers
 import streamlit as st
 
@@ -14,8 +15,16 @@ from models.sales import Product, Sale
 products_data: Dict[str, Product] = {}
 
 st.set_page_config("DRE", layout="wide")
-if not st.session_state.get("company") or not st.session_state.get("session_token"):
-    st.switch_page("login.py")
+if not st.query_params.get("company") or not st.query_params.get("session_token"):
+    print(st.query_params)
+    try:
+        st.query_params.company = st.session_state.company
+        st.query_params.session_token = st.session_state.session_token
+    except:
+        st.switch_page("login.py")
+else:
+    st.session_state.company = st.query_params.company
+    st.session_state.session_token= st.query_params.session_token
 
 
 def get_fidelity_plans() -> List[Plan]:
@@ -130,7 +139,13 @@ def get_subscriber_consume(shopps: List[Sale]) -> float:
 
 
 if __name__ == "__main__":
-    plans = get_fidelity_plans()
+    try:
+        plans = get_fidelity_plans()
+    except HTTPError as e:
+        if e.response.status_code == 401:
+            st.switch_page("login.py")
+        raise e
+
     resume = {
         plan.id: {
             "limite": {},
