@@ -24,7 +24,7 @@ if not st.query_params.get("company") or not st.query_params.get("session_token"
         st.switch_page("login.py")
 else:
     st.session_state.company = st.query_params.company
-    st.session_state.session_token= st.query_params.session_token
+    st.session_state.session_token = st.query_params.session_token
 
 
 def get_fidelity_plans() -> List[Plan]:
@@ -239,10 +239,16 @@ if __name__ == "__main__":
         if resume:
             with st.expander("Visão Geral"):
                 tile = st.container(border=True)
-                tile.metric("Total de Assinantes", sum([len(resume[sub]["consumo"].keys()) for sub in resume]))
-                
+                tile.metric(
+                    "Total de Assinantes",
+                    sum([len(resume[sub]["consumo"].keys()) for sub in resume]),
+                )
+
                 tabs = st.tabs([plan.name for plan in plans])
                 for tab, plan in enumerate(plans):
                     tile = tabs[tab].container(border=True)
-                    tile.metric(f"Total de Assinantes: {plan.name}", len(resume[plan.id]["consumo"].keys()))
+                    tile.metric(
+                        f"Total de Assinantes: {plan.name}",
+                        len(resume[plan.id]["consumo"].keys()),
+                    )
                     tabs[tab].area_chart(pd.DataFrame(resume[plan.id]))
