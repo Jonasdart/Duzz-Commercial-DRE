@@ -26,7 +26,7 @@ if not st.query_params.get("company") or not st.query_params.get("session_token"
         st.switch_page("login.py")
 else:
     st.session_state.company = st.query_params.company
-    st.session_state.session_token= st.query_params.session_token
+    st.session_state.session_token = st.query_params.session_token
 
 
 @lru_cache
@@ -125,10 +125,18 @@ def get_faturamento_data(months: List[date]):
 
         for stock in all_stocks:
             if (
-                stock.due_date
-                and stock.due_date.date() > month
-                and stock.due_date.date()
-                < month.replace(day=calendar.monthrange(month.year, month.month)[-1])
+                (
+                    stock.due_date
+                    and stock.due_date.date() > month
+                    and stock.due_date.date()
+                    < month.replace(
+                        day=calendar.monthrange(month.year, month.month)[-1]
+                    )
+                )
+                or not stock.due_date
+                and (
+                    stock.start_date.date() <= month 
+                )
             ):
                 # if (
                 #     stock.start_date.date() > month or not stock.due_date
@@ -217,6 +225,12 @@ if report_month:
                 value=f"R$ {round(descontos_totais, 2)}",
                 delta=f"{round(discount_percent, 2)} %",
                 delta_color="off",
+            )
+            tile = c_c2.container(height=120)
+            tile.metric(
+                "Margem sobre vendas",
+                value=f"R$ {round((lucro_bruto - descontos_totais) - despesas_cmv, 2)}",
+                delta=f"{round(despesas_cmv / (lucro_bruto - descontos_totais), 2)} %",
             )
 
     with c2:
