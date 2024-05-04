@@ -31,6 +31,7 @@ class Subscriber(BaseSchema):
     id: int
     customer: Customer
     moment: datetime
+    due_date: datetime
     promotion: PlansPromotions
 
     @classmethod
