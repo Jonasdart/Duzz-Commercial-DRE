@@ -16,7 +16,6 @@ products_data: Dict[str, Product] = {}
 
 st.set_page_config("DRE", layout="wide")
 if not st.query_params.get("company") or not st.query_params.get("session_token"):
-    print(st.query_params)
     try:
         st.query_params.company = st.session_state.company
         st.query_params.session_token = st.session_state.session_token
@@ -74,6 +73,7 @@ def get_subscribers(plan: Plan) -> List[Subscriber]:
     subscribers = response.json()
     for subscriber in subscribers:
         subscriber["moment"] = Subscriber.parse_moment(subscriber["moment"])
+        subscriber["due_date"] = subscriber["moment"] + timedelta(days=30)
         subscriber["customer"] = Customer(**get_customer_data(subscriber["customer"]))
         subscriber["promotion"] = plan.promotion
 
@@ -138,6 +138,18 @@ def get_subscriber_consume(shopps: List[Sale]) -> float:
     return consume
 
 
+def calc_due_date_interval(due_date: date):
+    interval = (due_date - datetime.today()).days
+
+    if interval <= 5:
+        return 'Finaliza em até 5 dias'
+    
+    if interval <= 15:
+        return 'Finaliza em até 15 dias'
+
+    return 'Finaliza em 16 dias ou mais'
+
+
 if __name__ == "__main__":
     try:
         plans = get_fidelity_plans()
@@ -168,10 +180,9 @@ if __name__ == "__main__":
         }
         for plan in plans
     }
+    data_limites = {plan.id: {"Início": {}, "Término": {}, "Hoje": {}, "Restante": {}} for plan in plans}
     if plans:
         for plan in plans:
-            categorias = {"categoria": {}, "consumo": {}}
-            produtos = {"produtos": {}, "consumo": {}}
             subscribers = get_subscribers(plan)
             if subscribers:
                 for subscriber in subscribers:
@@ -182,6 +193,10 @@ if __name__ == "__main__":
                     consume = get_subscriber_consume(shopps)
                     resume[plan.id]["limite"][subscriber_name] = plan.limit
                     resume[plan.id]["consumo"][subscriber_name] = consume
+                    data_limites[plan.id]["Início"][subscriber_name] = subscriber.moment
+                    data_limites[plan.id]["Término"][subscriber_name] = subscriber.due_date
+                    data_limites[plan.id]["Hoje"][subscriber_name] = datetime.today()
+                    data_limites[plan.id]["Restante"][subscriber_name] = calc_due_date_interval(subscriber.due_date)
 
                     _consumo_restante = plan.limit - consume
 
@@ -235,6 +250,7 @@ if __name__ == "__main__":
                         },
                     )
                     tabs[tab].scatter_chart(pd.DataFrame(resume[plan.id]))
+                    tabs[tab].scatter_chart(pd.DataFrame(data_limites[plan.id]), y=["Início", "Término", "Hoje"], size="Restante", color="Restante")
 
         if resume:
             with st.expander("Visão Geral"):
