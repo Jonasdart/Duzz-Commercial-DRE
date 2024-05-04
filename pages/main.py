@@ -193,13 +193,13 @@ if report_month:
         st.table(df)
         c_c1, c_c2 = c1.columns(2, gap="medium")
         with c_c1:
-            tile = c_c1.container(height=120)
+            tile = c_c1.container(border=True)
             tile.metric(
                 "Lucro Liquido",
                 value=f"R$ {round(lucro_liquido, 2)}",
                 delta=f"{round((lucro_liquido / lucro_bruto if lucro_bruto else 1) * 100)} %",
             )
-            tile = c_c1.container(height=120)
+            tile = c_c1.container(border=True)
             tile.metric(
                 "Receitas - Despesas",
                 value=f"R$ {round(lucro_bruto - despesas_admnistrativas, 2)}",
@@ -207,14 +207,14 @@ if report_month:
                 delta_color="normal",
             )
         with c_c2:
-            tile = c_c2.container(height=120)
+            tile = c_c2.container(border=True)
             tile.metric(
                 "Descontos sobre Receita",
                 value=f"R$ {round(descontos_totais, 2)}",
                 delta=f"{round(discount_percent, 2)} %",
                 delta_color="off",
             )
-            tile = c_c2.container(height=120)
+            tile = c_c2.container(border=True)
             tile.metric(
                 "Margem sobre o CMV",
                 value=f"R$ {round((lucro_bruto - descontos_totais) - despesas_cmv, 2)}",
