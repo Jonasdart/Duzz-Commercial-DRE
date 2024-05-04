@@ -134,9 +134,7 @@ def get_faturamento_data(months: List[date]):
                     )
                 )
                 or not stock.due_date
-                and (
-                    stock.start_date.date() <= month 
-                )
+                and (stock.start_date.date() <= month)
             ):
                 # if (
                 #     stock.start_date.date() > month or not stock.due_date
@@ -215,7 +213,7 @@ if report_month:
             tile.metric(
                 "Receitas - Despesas",
                 value=f"R$ {round(lucro_bruto - despesas_admnistrativas, 2)}",
-                delta=f"{round((lucro_bruto / despesas_admnistrativas if despesas_admnistrativas else 1))} %",
+                delta=f"{round(((lucro_bruto - despesas_admnistrativas) / despesas_admnistrativas if despesas_admnistrativas else 1) * 100)} %",
                 delta_color="normal",
             )
         with c_c2:
@@ -230,7 +228,7 @@ if report_month:
             tile.metric(
                 "Margem sobre o CMV",
                 value=f"R$ {round((lucro_bruto - descontos_totais) - despesas_cmv, 2)}",
-                delta=f"{round(despesas_cmv / (lucro_bruto - descontos_totais), 2)} %",
+                delta=f"{round((((lucro_bruto - descontos_totais) - despesas_cmv) / despesas_cmv) * 100, 2)} %",
             )
 
     with c2:
