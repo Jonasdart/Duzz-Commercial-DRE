@@ -5,7 +5,7 @@ from functools import lru_cache
 from typing import List
 
 from requests import HTTPError
-from helpers.api import rq, base_url, get_headers
+from helpers.api import rq, base_url, get_headers, get_stocks
 from models.enums import ReferenceTable
 from models.payments import Payment
 import streamlit as st
@@ -18,7 +18,6 @@ from models.stocks import Stock
 
 st.set_page_config("DRE", layout="wide")
 if not st.query_params.get("company") or not st.query_params.get("session_token"):
-    print(st.query_params)
     try:
         st.query_params.company = st.session_state.company
         st.query_params.session_token = st.session_state.session_token
@@ -27,6 +26,15 @@ if not st.query_params.get("company") or not st.query_params.get("session_token"
 else:
     st.session_state.company = st.query_params.company
     st.session_state.session_token = st.query_params.session_token
+
+
+all_stocks = get_stocks(
+    tuple(
+        get_headers(
+            st.session_state["company"], st.session_state["session_token"]
+        ).items()
+    )
+)
 
 
 @lru_cache
@@ -56,31 +64,6 @@ def get_payments(month: date) -> List[Payment]:
 
 
 @lru_cache
-def get_stocks():
-    parameters = {"withMoves": True}
-
-    stocks_list = rq.get(
-        base_url + "/stock",
-        params=parameters,
-        headers=get_headers(
-            st.session_state["company"], st.session_state["session_token"]
-        ),
-    )
-
-    if stocks_list.status_code == 404:
-        stocks_list = []
-    else:
-        stocks_list.raise_for_status()
-        stocks_list = stocks_list.json()
-
-    for stock in stocks_list:
-        stock["startDate"] = Stock.parse_date(stock["startDate"])
-        stock["dueDate"] = Stock.parse_date(stock["dueDate"])
-
-    return [Stock(**stock) for stock in stocks_list]
-
-
-@lru_cache
 def get_sales(month: date) -> List[Sale]:
     parameters = {
         "startRange": month.replace(day=1),
@@ -106,6 +89,33 @@ def get_sales(month: date) -> List[Sale]:
     return [Sale(**sale) for sale in sales_data]
 
 
+@lru_cache
+def get_period_cmv(month: date):
+    cmv = 0
+    for stock in all_stocks:
+        if (
+            (
+                stock.due_date
+                and (
+                    stock.start_date.date() >= month
+                    or stock.due_date.date()
+                    <= month.replace(
+                        day=calendar.monthrange(month.year, month.month)[-1]
+                    )
+                )
+            )
+            or not stock.due_date
+            and (stock.start_date.date() <= month)
+        ):
+            for move in stock.outs.moves:
+                if move.moment.date() >= month and move.moment.date() <= month.replace(
+                    day=calendar.monthrange(month.year, month.month)[-1]
+                ):
+                    cmv += move.value
+
+    return cmv
+
+
 def get_faturamento_data(months: List[date]):
     faturamento = {
         "despesas": {},
@@ -113,7 +123,7 @@ def get_faturamento_data(months: List[date]):
         "receitas": {},
         "descontos": {},
     }
-    all_stocks = get_stocks()
+
     for month in months:
         competence_payments = get_payments(month)
         competence_sales = get_sales(month)
@@ -121,27 +131,7 @@ def get_faturamento_data(months: List[date]):
         revenues: decimal = 0
         discounts: decimal = 0
         expenses: decimal = 0
-        cmv: decimal = 0
-
-        for stock in all_stocks:
-            if (
-                (
-                    stock.due_date
-                    and stock.due_date.date() > month
-                    and stock.due_date.date()
-                    < month.replace(
-                        day=calendar.monthrange(month.year, month.month)[-1]
-                    )
-                )
-                or not stock.due_date
-                and (stock.start_date.date() <= month)
-            ):
-                # if (
-                #     stock.start_date.date() > month or not stock.due_date
-                # ) and stock.start_date.date() <= month.replace(
-                #     day=calendar.monthrange(month.year, month.month)[-1]
-                # ):
-                cmv += stock.cmv
+        cmv: decimal = get_period_cmv(month)
 
         for payment in competence_payments:
             if payment.reference_table is ReferenceTable.SALES:
