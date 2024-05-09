@@ -24,7 +24,6 @@ def get_headers(company: str, session_token: str):
     return {"company": company, "sessionToken": session_token}
 
 
-# @lru_cache
 def get_stocks(headers: tuple) -> List[Stock]:
     headers = dict(headers)
     parameters = {"withMoves": True}
