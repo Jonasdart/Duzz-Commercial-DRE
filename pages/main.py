@@ -5,7 +5,7 @@ from functools import lru_cache
 from typing import List
 
 from requests import HTTPError
-from helpers.api import rq, base_url, get_headers
+from helpers.api import rq, base_url, get_headers, get_stocks
 from models.enums import ReferenceTable
 from models.payments import Payment
 import streamlit as st
@@ -26,29 +26,6 @@ if not st.query_params.get("company") or not st.query_params.get("session_token"
 else:
     st.session_state.company = st.query_params.company
     st.session_state.session_token = st.query_params.session_token
-
-
-def get_stocks(headers: tuple) -> List[Stock]:
-    headers = dict(headers)
-    parameters = {"withMoves": True}
-
-    stocks_list = rq.get(
-        base_url + "/stock",
-        params=parameters,
-        headers=headers,
-    )
-
-    if stocks_list.status_code == 404:
-        stocks_list = []
-    else:
-        stocks_list.raise_for_status()
-        stocks_list = stocks_list.json()
-
-    for stock in stocks_list:
-        stock["startDate"] = Stock.parse_date(stock["startDate"])
-        stock["dueDate"] = Stock.parse_date(stock["dueDate"])
-
-    return [Stock(**stock) for stock in stocks_list]
 
 
 all_stocks = get_stocks(
@@ -128,7 +105,6 @@ def get_period_cmv(month: date):
                 )
             )
             or not stock.due_date
-            and (stock.start_date.date() <= month)
         ):
             for move in stock.outs.moves:
                 if move.moment.date() >= month and move.moment.date() <= month.replace(
