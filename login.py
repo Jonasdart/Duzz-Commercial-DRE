@@ -19,4 +19,4 @@ if username and password and company:
         sleep(1)
         st.session_state.company = company
         st.session_state.session_token = session_token
-        st.switch_page("pages/main.py")
+        st.switch_page("pages/dre.py")

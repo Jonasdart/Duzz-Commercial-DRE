@@ -91,28 +91,44 @@ def get_sales(month: date) -> List[Sale]:
 
 @lru_cache
 def get_period_cmv(month: date):
-    cmv = 0
+    resume = {
+        "cmv": 0,
+        "products": {
+            "quantidade": {},
+            "custo": {},
+            # "unidade": {}
+        },
+    }
     for stock in all_stocks:
         if (
-            (
-                stock.due_date
-                and (
-                    stock.start_date.date() >= month
-                    or stock.due_date.date()
-                    <= month.replace(
-                        day=calendar.monthrange(month.year, month.month)[-1]
-                    )
-                )
+            stock.due_date
+            and (
+                stock.start_date.date() >= month
+                or stock.due_date.date()
+                <= month.replace(day=calendar.monthrange(month.year, month.month)[-1])
             )
-            or not stock.due_date
-        ):
+        ) or not stock.due_date:
             for move in stock.outs.moves:
                 if move.moment.date() >= month and move.moment.date() <= month.replace(
                     day=calendar.monthrange(month.year, month.month)[-1]
                 ):
-                    cmv += move.value
+                    resume["cmv"] += move.value
+                    try:
+                        resume["products"]["quantidade"][move.product_id] += move.amount
+                        resume["products"]["custo"][move.product_id] += move.value
+                        # resume["products"]["unidade"][move.product_id] = (
+                        #     resume["products"]["custo"][move.product_id]
+                        #     / resume["products"]["quantidade"][move.product_id]
+                        # )
+                    except KeyError:
+                        resume["products"]["quantidade"][move.product_id] = move.amount
+                        resume["products"]["custo"][move.product_id] = move.value
+                        # resume["products"]["unidade"][move.product_id] = (
+                        #     resume["products"]["custo"][move.product_id]
+                        #     / resume["products"]["quantidade"][move.product_id]
+                        # )
 
-    return cmv
+    return resume
 
 
 def get_faturamento_data(months: List[date]):
@@ -121,6 +137,10 @@ def get_faturamento_data(months: List[date]):
         "cmv": {},
         "receitas": {},
         "descontos": {},
+        "products": {
+            "quantidade": {},
+            "custo": {},
+        },
     }
 
     for month in months:
@@ -130,7 +150,15 @@ def get_faturamento_data(months: List[date]):
         revenues: decimal = 0
         discounts: decimal = 0
         expenses: decimal = 0
-        cmv: decimal = get_period_cmv(month)
+        cmv_resume: dict = get_period_cmv(month)
+        cmv = cmv_resume.pop("cmv")
+        products = cmv_resume.pop("products")
+        for item in products:
+            for _product in products[item]:
+                try:
+                    faturamento["products"][item][_product] += products[item][_product]
+                except KeyError:
+                    faturamento["products"][item][_product] = products[item][_product]
 
         for payment in competence_payments:
             if payment.reference_table is ReferenceTable.SALES:
@@ -167,18 +195,22 @@ report_month.sort()
 
 if report_month:
     try:
-        df = pd.DataFrame(get_faturamento_data(report_month))
+        faturamento = get_faturamento_data(report_month)
+        produtos = faturamento.pop("products")
+        df_fat = pd.DataFrame(faturamento)
+        df_produtos = pd.DataFrame(produtos)
+        df_produtos = df_produtos.sort_values("quantidade", ascending=False)
     except HTTPError as e:
         if e.response.status_code == 401:
             st.switch_page("login.py")
         raise e
 
-    df.loc["acumulado"] = df.select_dtypes(np.number).sum()
+    df_fat.loc["acumulado"] = df_fat.select_dtypes(np.number).sum()
 
-    despesas_admnistrativas = df["despesas"]["acumulado"]
-    despesas_cmv = df["cmv"]["acumulado"]
-    lucro_bruto = df["receitas"]["acumulado"]
-    descontos_totais = df["descontos"]["acumulado"]
+    despesas_admnistrativas = df_fat["despesas"]["acumulado"]
+    despesas_cmv = df_fat["cmv"]["acumulado"]
+    lucro_bruto = df_fat["receitas"]["acumulado"]
+    descontos_totais = df_fat["descontos"]["acumulado"]
 
     despesas_totais = despesas_admnistrativas + despesas_cmv + descontos_totais
 
@@ -189,7 +221,7 @@ if report_month:
 
     with c1:
         st.header("DRE DUZZ COMMERCIAL")
-        st.table(df)
+        st.table(df_fat)
         c_c1, c_c2 = c1.columns(2, gap="medium")
         with c_c1:
             tile = c_c1.container(border=True)
@@ -219,16 +251,19 @@ if report_month:
                 value=f"R$ {round((lucro_bruto - descontos_totais) - despesas_cmv, 2)}",
                 delta=f"{round((((lucro_bruto - descontos_totais) - despesas_cmv) / despesas_cmv) * 100, 2)} %",
             )
+        
+        c1.subheader("TOP 10 MAIS VENDIDOS")
+        c1.table(df_produtos.head(10))
 
     with c2:
         st.bar_chart(
-            df,
+            df_fat,
             color=("#FF5F35", "#FCAF19", "#EF4854", "#70F06D"),
             width=500,
             use_container_width=False,
         )
         st.area_chart(
-            df,
+            df_fat,
             color=("#FF5F35", "#FCAF19", "#EF4854", "#70F06D"),
             width=500,
             use_container_width=False,
