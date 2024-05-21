@@ -128,6 +128,9 @@ def get_subscriber_consume(shopps: List[Sale]) -> float:
 
 def calc_due_date_interval(due_date: date):
     interval = (due_date - datetime.today()).days
+    
+    if interval <= 0:
+        return "Ja Venceu"
 
     if interval <= 5:
         return "Finaliza em até 5 dias"
