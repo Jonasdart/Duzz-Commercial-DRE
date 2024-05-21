@@ -5,7 +5,7 @@ from typing import Dict, List
 
 import pandas as pd
 from requests import HTTPError
-from helpers.api import rq, base_url, get_headers
+from helpers.api import get_product_data, rq, base_url, get_headers
 import streamlit as st
 
 from models.customers import Customer
@@ -59,7 +59,7 @@ def get_customer_data(customer_id: int) -> Customer:
 def get_subscribers(plan: Plan) -> List[Subscriber]:
     headers = get_headers(st.session_state.company, st.session_state.session_token)
     today = datetime.today().replace(hour=23, minute=59, second=59)
-    vigency_init = (today - timedelta(days=30)).replace(hour=0, minute=0, second=0)
+    vigency_init = (today - timedelta(days=45)).replace(hour=0, minute=0, second=0)
     parameters = {
         "services": f"[{plan.id}]",
         "startRange": vigency_init,
@@ -108,30 +108,18 @@ def get_subscriber_shopps(subscriber: Subscriber) -> List[Sale]:
     return [Sale(**shopp) for shopp in shopps]
 
 
-def get_product_data(product_id: int) -> Product:
-    headers = get_headers(st.session_state.company, st.session_state.session_token)
-    parameters = {"id": product_id}
-    response = rq.get(base_url + "/products", params=parameters, headers=headers)
-    if response.status_code == 404:
-        return {}
-    response.raise_for_status()
-    product_data = response.json()[0]
-    product_data = Product(
-        id=product_data["id"],
-        size=product_data["particulars"]["tamanho"],
-        price=product_data["value"],
-    )
-
-    return product_data
-
-
 def get_subscriber_consume(shopps: List[Sale]) -> float:
     consume = 0
     for shopp in shopps:
         products = shopp.products
         for product in products:
             if product not in products_data:
-                product_data = get_product_data(product)
+                product_data = get_product_data(
+                    get_headers(
+                        st.session_state.company, st.session_state.session_token
+                    ),
+                    product,
+                )
                 products_data[product] = product_data
             consume += products_data[product].size * float(products[product])
 

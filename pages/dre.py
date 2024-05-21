@@ -251,9 +251,10 @@ if report_month:
                 value=f"R$ {round((lucro_bruto - descontos_totais) - despesas_cmv, 2)}",
                 delta=f"{round((((lucro_bruto - descontos_totais) - despesas_cmv) / despesas_cmv) * 100, 2)} %",
             )
-        
-        c1.subheader("TOP 10 MAIS VENDIDOS")
-        c1.table(df_produtos.head(10))
+
+        show_num = c1.number_input("Visualizar o top:", value=10, min_value=1)
+        c1.subheader(f"TOP {show_num} MAIS VENDIDOS")
+        c1.table(df_produtos.head(show_num))
 
     with c2:
         st.bar_chart(

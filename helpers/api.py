@@ -2,6 +2,7 @@ from functools import lru_cache
 from typing import List
 import requests as rq
 
+from models.sales import Product
 from models.stocks import Stock
 
 base_url = "http://commercial.duzzsystem.com.br:8080"
@@ -46,3 +47,20 @@ def get_stocks(headers: tuple) -> List[Stock]:
         stock["dueDate"] = Stock.parse_date(stock["dueDate"])
 
     return [Stock(**stock) for stock in stocks_list]
+
+
+def get_product_data(headers, product_id: int) -> Product:
+    parameters = {"id": product_id}
+    response = rq.get(base_url + "/products", params=parameters, headers=headers)
+    if response.status_code == 404:
+        return {}
+    response.raise_for_status()
+    product_data = response.json()[0]
+    product_data = Product(
+        id=product_data["id"],
+        size=product_data["particulars"]["tamanho"],
+        price=product_data["value"],
+    )
+
+    return product_data
+
