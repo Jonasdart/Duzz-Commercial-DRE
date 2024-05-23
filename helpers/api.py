@@ -77,6 +77,7 @@ def get_product_data(headers, product_id: int) -> Product:
     product_data = response.json()[0]
     product_data = Product(
         id=product_data["id"],
+        name=product_data["name"],
         size=product_data["particulars"]["tamanho"],
         price=product_data["value"],
     )
