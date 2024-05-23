@@ -9,6 +9,7 @@ from helpers.api import (
     get_customer_data,
     get_payments,
     get_sales,
+    get_service_data,
     get_stock_by_month,
     rq,
     base_url,
@@ -102,11 +103,11 @@ if report_months:
         )
         stocks = get_stock_by_month(month, headers)
         return get_faturamento_data(payments, sales, stocks)
-    
+
     def buscar_produtos(month: date, headers: dict):
         stocks = get_stock_by_month(month, headers)
         resumo = {}
-        
+
         for stock in stocks:
             for move in stock.outs.moves:
                 if move.moment.date() >= month and move.moment.date() <= month.replace(
@@ -116,9 +117,22 @@ if report_months:
                         resumo[move.product_id] += move.amount
                     except KeyError:
                         resumo[move.product_id] = move.amount
-                        
+
         return resumo
-                
+
+    def buscar_servicos(month: date, headers: dict):
+        sales = get_sales(month, headers)
+        resumo = {}
+
+        for sale in sales:
+            for service in sale.services.items():
+                service_data = get_service_data(service[0], headers)
+                try:
+                    resumo[service_data.name] += float(service[1])
+                except KeyError:
+                    resumo[service_data.name] = float(service[1])
+
+        return resumo
 
     def buscar_fidelidade(month: date, headers: dict) -> dict:
         sales = get_sales(month, headers)
@@ -144,6 +158,9 @@ if report_months:
             resume["produtos"][month.strftime("%m/%y")] = buscar_produtos(
                 month, headers
             )
+            resume["serviços"][month.strftime("%m/%y")] = buscar_servicos(
+                month, headers
+            )
 
         df_fat = pd.DataFrame(resume.pop("faturamento")).T
         df_fat.loc["acumulado"] = df_fat.select_dtypes(np.number).sum()
@@ -152,10 +169,14 @@ if report_months:
         df_clientes.fillna(0, inplace=True)
         df_clientes["acumulado"] = df_clientes.cumsum(axis=1).iloc[:, -1]
         df_clientes = df_clientes.sort_values("acumulado", ascending=False)
-        
+
         df_produtos = pd.DataFrame(resume.pop("produtos"))
         df_produtos["acumulado"] = df_produtos.cumsum(axis=1).iloc[:, -1]
         df_produtos = df_produtos.sort_values("acumulado", ascending=False)
+
+        df_servicos = pd.DataFrame(resume.pop("serviços"))
+        df_servicos["acumulado"] = df_servicos.cumsum(axis=1).iloc[:, -1]
+        df_servicos = df_servicos.sort_values("acumulado", ascending=False)
     except HTTPError as e:
         if e.response.status_code == 401:
             st.switch_page("login.py")
@@ -225,12 +246,17 @@ if report_months:
             )
 
     with st.expander("Resumo Fidelidade"):
-        show_customers = st.number_input("Visualizar o top:", value=10, min_value=1, key="customers")
+        show_customers = st.number_input(
+            "Visualizar o top:", value=10, min_value=1, key="customers"
+        )
         st.subheader(f"TOP {show_customers} CLIENTES")
         st.table(df_clientes.head(show_customers))
         st.bar_chart(df_clientes.head(show_customers)["acumulado"])
-        
+
     with st.expander("Resumo Produtos e Serviços"):
         show_num = st.number_input("Visualizar o top:", value=10, min_value=1)
         st.subheader(f"TOP {show_num} PRODUTOS MAIS VENDIDOS")
         st.table(df_produtos.head(show_num))
+
+        st.subheader(f"TOP {show_num} SERVIÇOS MAIS VENDIDOS")
+        st.table(df_servicos.head(show_num))

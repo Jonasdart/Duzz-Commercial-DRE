@@ -28,5 +28,13 @@ class Sale(BaseSchema):
 
 class Product(BaseSchema):
     id: int
+    name: Optional[str]
     size: float
+    price: Optional[float]
+
+
+class Service(BaseSchema):
+    id: int
+    name: str
+    size: Optional[float]
     price: Optional[float]

@@ -6,7 +6,7 @@ import requests as rq
 
 from models.customers import Customer
 from models.payments import Payment
-from models.sales import Product, Sale
+from models.sales import Product, Sale, Service
 from models.stocks import Stock
 
 base_url = "http://commercial.duzzsystem.com.br:8080"
@@ -82,6 +82,23 @@ def get_product_data(headers, product_id: int) -> Product:
     )
 
     return product_data
+
+
+def get_service_data(service_id: int, headers) -> Service:
+    parameters = {"id": service_id}
+    response = rq.get(base_url + "/services", params=parameters, headers=headers)
+    if response.status_code == 404:
+        return {}
+    response.raise_for_status()
+    service_data = response.json()[0]
+    service_data = Service(
+        id=service_data["id"],
+        name=service_data["name"],
+        size=service_data.get("particulars", {}).get("tamanho"),
+        price=service_data["value"],
+    )
+
+    return service_data
 
 
 @lru_cache
