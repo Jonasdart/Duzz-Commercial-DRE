@@ -14,7 +14,9 @@ from models.sales import Product, Sale
 
 products_data: Dict[str, Product] = {}
 
-st.set_page_config("DRE", layout="wide")
+st.set_page_config(
+    "dcommercial - Planos Fidelidade", layout="wide", initial_sidebar_state="collapsed"
+)
 if not st.query_params.get("company") or not st.query_params.get("session_token"):
     try:
         st.query_params.company = st.session_state.company
@@ -128,7 +130,7 @@ def get_subscriber_consume(shopps: List[Sale]) -> float:
 
 def calc_due_date_interval(due_date: date):
     interval = (due_date - datetime.today()).days
-    
+
     if interval <= 0:
         return "Ja Venceu"
 

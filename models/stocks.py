@@ -28,7 +28,7 @@ class Stock(BaseSchema):
     value: float
     start_date: datetime
     due_date: Optional[datetime] = None
-    cmv: float
+    cogs: float
     entries: StockEntries
     outs: StockOuts
 
