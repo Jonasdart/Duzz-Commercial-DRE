@@ -183,10 +183,12 @@ if report_months:
         df_clientes = df_clientes.sort_values("acumulado", ascending=False)
 
         df_produtos = pd.DataFrame(resume.pop("produtos"))
+        df_produtos.fillna(0, inplace=True)
         df_produtos["acumulado"] = df_produtos.cumsum(axis=1).iloc[:, -1]
         df_produtos = df_produtos.sort_values("acumulado", ascending=False)
 
         df_servicos = pd.DataFrame(resume.pop("serviços"))
+        df_servicos.fillna(0, inplace=True)
         df_servicos["acumulado"] = df_servicos.cumsum(axis=1).iloc[:, -1]
         df_servicos = df_servicos.sort_values("acumulado", ascending=False)
     except HTTPError as e:
