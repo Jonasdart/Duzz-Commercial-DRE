@@ -6,6 +6,7 @@ from typing import List
 
 from requests import HTTPError
 from helpers.api import (
+    get_bills,
     get_customer_data,
     get_payments,
     get_sales,
@@ -16,6 +17,7 @@ from helpers.api import (
     get_headers,
     get_stocks,
 )
+from models.bills import Bills
 from models.enums import ReferenceTable
 from models.payments import Payment
 import streamlit as st
@@ -41,7 +43,10 @@ else:
 
 
 def get_faturamento_data(
-    payments: List[Payment], sales: List[Sale], stocks: List[Stock]
+    payments: List[Payment],
+    sales: List[Sale],
+    stocks: List[Stock],
+    bills_to_pay: List[Bills],
 ):
     revenues: decimal = 0
     discounts: decimal = 0
@@ -65,7 +70,12 @@ def get_faturamento_data(
             discounts += sale.discount
 
         if payment.reference_table is ReferenceTable.BILLS_TO_PAY:
-            expenses += payment.value
+            for bill in bills_to_pay:
+                if (
+                    bill.id == payment.reference_id
+                    and bill.reference_table is not ReferenceTable.STOCK_ENTRIES
+                ):
+                    expenses += payment.value
 
     return {
         "receitas": revenues,
@@ -82,6 +92,11 @@ report_months = st.multiselect(
 )
 
 report_months.sort()
+## Generate Data
+headers = get_headers(
+    st.session_state["company"], st.session_state["session_token"]
+)
+bills_to_pay = get_bills(headers)
 
 if report_months:
     resume = {
@@ -90,10 +105,6 @@ if report_months:
         "produtos": {f"{month.strftime('%m/%y')}": {} for month in report_months},
         "serviços": {f"{month.strftime('%m/%y')}": {} for month in report_months},
     }
-    ## Generate Data
-    headers = get_headers(
-        st.session_state["company"], st.session_state["session_token"]
-    )
 
     def buscar_faturamento(month: date, headers: dict):
         payments = get_payments(month, headers)
@@ -102,7 +113,7 @@ if report_months:
             headers,
         )
         stocks = get_stock_by_month(month, headers)
-        return get_faturamento_data(payments, sales, stocks)
+        return get_faturamento_data(payments, sales, stocks, bills_to_pay)
 
     def buscar_produtos(month: date, headers: dict):
         stocks = get_stock_by_month(month, headers)

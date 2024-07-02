@@ -4,6 +4,7 @@ from functools import lru_cache
 from typing import List, Union
 import requests as rq
 
+from models.bills import Bills
 from models.customers import Customer
 from models.payments import Payment
 from models.sales import Product, Sale, Service
@@ -162,3 +163,22 @@ def get_payments(month: date, headers: dict) -> List[Payment]:
         payment["done"] = Payment.parse_done(payment["done"])
 
     return [Payment(**payment) for payment in payments_data]
+
+
+def get_bills(headers: dict):
+    bills_data = rq.get(
+        base_url + "/bills-to-pay",
+        headers=headers,
+    )
+
+    if bills_data.status_code == 404:
+        bills_data = []
+    else:
+        bills_data = bills_data.json()
+
+    for bill_to_pay in bills_data:
+        bill_to_pay["createdAt"] = Bills.parse_datetime(bill_to_pay["createdAt"])
+        bill_to_pay["closedAt"] = Bills.parse_datetime(bill_to_pay["closedAt"])
+        bill_to_pay["dueDate"] = Bills.parse_datetime(bill_to_pay["dueDate"])
+
+    return [Bills(**bill) for bill in bills_data]
