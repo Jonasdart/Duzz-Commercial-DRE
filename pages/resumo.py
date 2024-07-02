@@ -93,9 +93,10 @@ report_months = st.multiselect(
 
 report_months.sort()
 ## Generate Data
-headers = get_headers(
+headers = tuple(get_headers(
     st.session_state["company"], st.session_state["session_token"]
-)
+).items())
+print(dict(headers))
 bills_to_pay = get_bills(headers)
 
 if report_months:
@@ -106,7 +107,7 @@ if report_months:
         "serviços": {f"{month.strftime('%m/%y')}": {} for month in report_months},
     }
 
-    def buscar_faturamento(month: date, headers: dict):
+    def buscar_faturamento(month: date, headers: tuple):
         payments = get_payments(month, headers)
         sales = get_sales(
             month,
@@ -115,7 +116,7 @@ if report_months:
         stocks = get_stock_by_month(month, headers)
         return get_faturamento_data(payments, sales, stocks, bills_to_pay)
 
-    def buscar_produtos(month: date, headers: dict):
+    def buscar_produtos(month: date, headers: tuple):
         stocks = get_stock_by_month(month, headers)
         resumo = {}
 
@@ -131,7 +132,7 @@ if report_months:
 
         return resumo
 
-    def buscar_servicos(month: date, headers: dict):
+    def buscar_servicos(month: date, headers: tuple):
         sales = get_sales(month, headers)
         resumo = {}
 
@@ -145,12 +146,12 @@ if report_months:
 
         return resumo
 
-    def buscar_fidelidade(month: date, headers: dict) -> dict:
+    def buscar_fidelidade(month: date, headers: tuple) -> dict:
         sales = get_sales(month, headers)
         resumo = {}
 
         for sale in sales:
-            customer = get_customer_data(sale.customer, tuple(headers.items()))
+            customer = get_customer_data(sale.customer, headers)
             try:
                 resumo[customer.get_full_name()] += sale.value
             except KeyError:

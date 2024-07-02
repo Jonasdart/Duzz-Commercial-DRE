@@ -9,6 +9,8 @@ from models.customers import Customer
 from models.payments import Payment
 from models.sales import Product, Sale, Service
 from models.stocks import Stock
+import cachetools.func
+
 
 base_url = "http://commercial.duzzsystem.com.br:8080"
 
@@ -30,13 +32,14 @@ def get_headers(company: str, session_token: str):
     return {"company": company, "sessionToken": session_token}
 
 
-def get_stocks(headers: dict) -> List[Stock]:
+@cachetools.func.ttl_cache(maxsize=128, ttl=10 * 60)
+def get_stocks(headers: tuple) -> List[Stock]:
     parameters = {"withMoves": True}
 
     stocks_list = rq.get(
         base_url + "/stock",
         params=parameters,
-        headers=headers,
+        headers=dict(headers),
     )
 
     if stocks_list.status_code == 404:
@@ -53,7 +56,8 @@ def get_stocks(headers: dict) -> List[Stock]:
     return [Stock(**stock) for stock in stocks_list]
 
 
-def get_stock_by_month(month: date, headers: dict) -> List[Union[Stock,]]:
+@cachetools.func.ttl_cache(maxsize=128, ttl=10 * 60)
+def get_stock_by_month(month: date, headers: tuple) -> List[Union[Stock,]]:
     filtered_stocks = []
     for stock in get_stocks(headers):
         if (
@@ -69,9 +73,10 @@ def get_stock_by_month(month: date, headers: dict) -> List[Union[Stock,]]:
     return filtered_stocks
 
 
-def get_product_data(headers, product_id: int) -> Product:
+@cachetools.func.ttl_cache(maxsize=128, ttl=10 * 60)
+def get_product_data(headers: tuple, product_id: int) -> Product:
     parameters = {"id": product_id}
-    response = rq.get(base_url + "/products", params=parameters, headers=headers)
+    response = rq.get(base_url + "/products", params=parameters, headers=dict(headers))
     if response.status_code == 404:
         return {}
     response.raise_for_status()
@@ -86,9 +91,10 @@ def get_product_data(headers, product_id: int) -> Product:
     return product_data
 
 
-def get_service_data(service_id: int, headers) -> Service:
+@cachetools.func.ttl_cache(maxsize=128, ttl=10 * 60)
+def get_service_data(service_id: int, headers: tuple) -> Service:
     parameters = {"id": service_id}
-    response = rq.get(base_url + "/services", params=parameters, headers=headers)
+    response = rq.get(base_url + "/services", params=parameters, headers=dict(headers))
     if response.status_code == 404:
         return {}
     response.raise_for_status()
@@ -103,7 +109,7 @@ def get_service_data(service_id: int, headers) -> Service:
     return service_data
 
 
-@lru_cache
+@cachetools.func.ttl_cache(maxsize=128, ttl=10 * 60)
 def get_customer_data(customer_id: int, headers: tuple) -> Customer:
     headers = dict(headers)
     parameters = {"id": customer_id}
@@ -117,8 +123,8 @@ def get_customer_data(customer_id: int, headers: tuple) -> Customer:
     return Customer(**customer_data)
 
 
-# @lru_cache
-def get_sales(month: date, headers: dict) -> List[Sale]:
+@cachetools.func.ttl_cache(maxsize=128, ttl=10 * 60)
+def get_sales(month: date, headers: tuple) -> List[Sale]:
     parameters = {
         "startRange": month.replace(day=1),
         "endRange": month.replace(day=calendar.monthrange(month.year, month.month)[-1]),
@@ -127,7 +133,7 @@ def get_sales(month: date, headers: dict) -> List[Sale]:
     sales_data = rq.get(
         base_url + "/sales",
         params=parameters,
-        headers=headers,
+        headers=dict(headers),
     )
 
     if sales_data.status_code == 404:
@@ -141,8 +147,8 @@ def get_sales(month: date, headers: dict) -> List[Sale]:
     return [Sale(**sale) for sale in sales_data]
 
 
-# @lru_cache
-def get_payments(month: date, headers: dict) -> List[Payment]:
+@cachetools.func.ttl_cache(maxsize=128, ttl=10 * 60)
+def get_payments(month: date, headers: tuple) -> List[Payment]:
     parameters = {
         "startRange": month.replace(day=1),
         "endRange": month.replace(day=calendar.monthrange(month.year, month.month)[-1]),
@@ -151,7 +157,7 @@ def get_payments(month: date, headers: dict) -> List[Payment]:
     payments_data = rq.get(
         base_url + "/payments",
         params=parameters,
-        headers=headers,
+        headers=dict(headers),
     )
 
     if payments_data.status_code == 404:
@@ -165,10 +171,11 @@ def get_payments(month: date, headers: dict) -> List[Payment]:
     return [Payment(**payment) for payment in payments_data]
 
 
-def get_bills(headers: dict):
+@cachetools.func.ttl_cache(maxsize=128, ttl=10 * 60)
+def get_bills(headers: tuple):
     bills_data = rq.get(
         base_url + "/bills-to-pay",
-        headers=headers,
+        headers=dict(headers),
     )
 
     if bills_data.status_code == 404:
