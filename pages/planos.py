@@ -31,7 +31,7 @@ else:
 def get_fidelity_plans() -> List[Plan]:
     headers = get_headers(st.session_state.company, st.session_state.session_token)
     parameters = {"name": "Plano"}
-    response = rq.get(base_url + "/services", params=parameters, headers=headers)
+    response = rq.get(base_url + "/services", params=parameters, headers=dict(headers))
     if response.status_code == 404:
         return []
 
@@ -49,7 +49,7 @@ def get_fidelity_plans() -> List[Plan]:
 def get_customer_data(customer_id: int) -> Customer:
     headers = get_headers(st.session_state.company, st.session_state.session_token)
     parameters = {"id": customer_id}
-    response = rq.get(base_url + "/customers", params=parameters, headers=headers)
+    response = rq.get(base_url + "/customers", params=parameters, headers=dict(headers))
     if response.status_code == 404:
         return []
 
@@ -67,7 +67,7 @@ def get_subscribers(plan: Plan) -> List[Subscriber]:
         "startRange": vigency_init,
         "endRange": today,
     }
-    response = rq.get(base_url + "/sales", params=parameters, headers=headers)
+    response = rq.get(base_url + "/sales", params=parameters, headers=dict(headers))
     if response.status_code == 404:
         return []
 
@@ -99,7 +99,7 @@ def get_subscriber_shopps(subscriber: Subscriber) -> List[Sale]:
         "endRange": vigency_end,
     }
 
-    response = rq.get(base_url + "/sales", params=parameters, headers=headers)
+    response = rq.get(base_url + "/sales", params=parameters, headers=dict(headers))
     if response.status_code == 404:
         return []
 
