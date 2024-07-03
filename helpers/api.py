@@ -28,8 +28,8 @@ def get_token(username: str, password: str, company: str):
 
 
 @lru_cache
-def get_headers(company: str, session_token: str):
-    return {"company": company, "sessionToken": session_token}
+def get_headers(company: str, session_token: str) -> tuple:
+    return (("company", company), ("sessionToken", session_token))
 
 
 @cachetools.func.ttl_cache(maxsize=128, ttl=10 * 60)

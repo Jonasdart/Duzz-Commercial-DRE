@@ -93,9 +93,9 @@ report_months = st.multiselect(
 
 report_months.sort()
 ## Generate Data
-headers = tuple(get_headers(
+headers = get_headers(
     st.session_state["company"], st.session_state["session_token"]
-).items())
+)
 print(dict(headers))
 bills_to_pay = get_bills(headers)
 
