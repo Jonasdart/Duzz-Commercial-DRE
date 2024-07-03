@@ -197,14 +197,16 @@ if report_months:
         raise e
 
     despesas_admnistrativas = df_fat["despesas"]["acumulado"]
-    despesas_cmv = df_fat["cmv"]["acumulado"]
-    lucro_bruto = df_fat["receitas"]["acumulado"]
+    custo_mercadoria_vendida = df_fat["cmv"]["acumulado"]
+    receita_bruta = df_fat["receitas"]["acumulado"]
     descontos_totais = df_fat["descontos"]["acumulado"]
+    receita_menos_descontos = (receita_bruta - descontos_totais)
+    lucro_bruto = receita_menos_descontos - custo_mercadoria_vendida
 
-    despesas_totais = despesas_admnistrativas + despesas_cmv + descontos_totais
+    despesas_totais = despesas_admnistrativas + custo_mercadoria_vendida
 
-    lucro_liquido = lucro_bruto - despesas_totais
-    discount_percent = (descontos_totais / lucro_bruto if lucro_bruto else 1) * 100
+    lucro_liquido = receita_menos_descontos - despesas_totais
+    discount_percent = (descontos_totais / receita_bruta if receita_bruta else 1) * 100
 
     # Visualize geral data
     with st.expander("Resumo Geral", expanded=True):
@@ -228,13 +230,13 @@ if report_months:
                 tile.metric(
                     "Lucro Liquido",
                     value=f"R$ {round(lucro_liquido, 2)}",
-                    delta=f"{round((lucro_liquido / lucro_bruto if lucro_bruto else 1) * 100)} %",
+                    delta=f"{round((lucro_liquido / receita_bruta if receita_bruta else 1) * 100)} %",
                 )
                 tile = c_c1.container(border=True)
                 tile.metric(
                     "Receitas - Despesas",
-                    value=f"R$ {round(lucro_bruto - despesas_admnistrativas, 2)}",
-                    delta=f"{round(((lucro_bruto - despesas_admnistrativas) / despesas_admnistrativas if despesas_admnistrativas else 1) * 100)} %",
+                    value=f"R$ {round(receita_menos_descontos - despesas_admnistrativas, 2)}",
+                    delta=f"{round(((receita_menos_descontos - despesas_admnistrativas) / despesas_admnistrativas if despesas_admnistrativas else 1) * 100)} %",
                     delta_color="normal",
                 )
             with c_c2:
@@ -246,10 +248,13 @@ if report_months:
                     delta_color="off",
                 )
                 tile = c_c2.container(border=True)
+                
+                _cmv_delta = round(custo_mercadoria_vendida / receita_menos_descontos * 100, 2)
                 tile.metric(
-                    "Margem sobre o CMV",
-                    value=f"R$ {round((lucro_bruto - descontos_totais) - despesas_cmv, 2)}",
-                    delta=f"{round((((lucro_bruto - descontos_totais) - despesas_cmv) / despesas_cmv) * 100, 2)} %",
+                    "CMV Sobre Receita",
+                    value=f"R$ {round(lucro_bruto, 2)}",
+                    delta=f"{_cmv_delta} %",
+                    delta_color="inverse" if _cmv_delta > 50 else "normal"
                 )
 
             c2.area_chart(
