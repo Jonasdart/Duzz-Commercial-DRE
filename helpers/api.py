@@ -12,7 +12,7 @@ from models.stocks import Stock
 import cachetools.func
 
 
-base_url = "http://commercial.duzzsystem.com.br:8080"
+base_url = "https://api.duzzsystem.com.br"
 
 
 @lru_cache
