@@ -24,7 +24,7 @@ def get_token(username: str, password: str, company: str):
     user_data.raise_for_status()
     user_data = user_data.json()
 
-    return user_data["sessionToken"]
+    return user_data["sessionToken"], user_data["companyData"]["pseudonimo"]
 
 
 @lru_cache

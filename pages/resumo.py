@@ -35,11 +35,13 @@ if not st.query_params.get("company") or not st.query_params.get("session_token"
     try:
         st.query_params.company = st.session_state.company
         st.query_params.session_token = st.session_state.session_token
+        st.query_params.pseudonym = st.session_state.pseudonym
     except:
         st.switch_page("login.py")
 else:
     st.session_state.company = st.query_params.company
     st.session_state.session_token = st.query_params.session_token
+    st.session_state.pseudonym = st.query_params.pseudonym
 
 st.markdown(
     """
@@ -229,7 +231,7 @@ else:
             c1, c2 = st.columns(2, gap="large")
 
             with c1:
-                st.header("DRE DUZZ COMMERCIAL")
+                st.header(f"DRE {st.query_params.pseudonym.upper()}")
                 st.table(df_fat)
 
                 c1.bar_chart(

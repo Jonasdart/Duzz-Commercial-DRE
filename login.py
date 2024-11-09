@@ -24,7 +24,7 @@ company = st.text_input("Informe o ID da empresa")
 
 if username and password and company:
     try:
-        session_token = get_token(username, password, company)
+        session_token, pseudonym = get_token(username, password, company)
     except:
         st.error("Usuário/Senha ou o ID da empresa estão incorretos", icon="🚨")
     else:
@@ -32,4 +32,5 @@ if username and password and company:
         sleep(1)
         st.session_state.company = company
         st.session_state.session_token = session_token
+        st.session_state.pseudonym = pseudonym
         st.switch_page("pages/resumo.py")
