@@ -41,6 +41,18 @@ else:
     st.session_state.company = st.query_params.company
     st.session_state.session_token = st.query_params.session_token
 
+if st.query_params.get("embed") == "true":
+    st.markdown(
+        """
+    <style>
+        [data-testid="collapsedControl"] {
+            display: none
+        }
+    </style>
+    """,
+        unsafe_allow_html=True,
+    )
+
 
 def get_faturamento_data(
     payments: List[Payment],
@@ -84,198 +96,204 @@ def get_faturamento_data(
         "cmv": cogs,
     }
 
-
-months = [date(2023, month + 1, 1) for month in range(12)]
-months.extend([date(2024, month + 1, 1) for month in range(date.today().month)])
-report_months = st.multiselect(
-    "", months, default=months[-1], placeholder="Selecione um mês de competência"
-)
-
-report_months.sort()
-## Generate Data
 headers = get_headers(
     st.session_state["company"], st.session_state["session_token"]
 )
-print(dict(headers))
-bills_to_pay = get_bills(headers)
 
-if report_months:
-    resume = {
-        "faturamento": {f"{month.strftime('%m/%y')}": {} for month in report_months},
-        "clientes": {f"{month.strftime('%m/%y')}": {} for month in report_months},
-        "produtos": {f"{month.strftime('%m/%y')}": {} for month in report_months},
-        "serviços": {f"{month.strftime('%m/%y')}": {} for month in report_months},
-    }
+try:
+    bills_to_pay = get_bills(headers)
+except Exception as e:
+    st.balloons()
+    st.title("Faça o :blue[Upgrade]⬆️ do seu plano!")
+    st.title("E garanta já essa e muitas outras funcionalidades! :sunglasses:")
+    st.link_button("É pra já! 📲", url="https://api.whatsapp.com/send/?phone=5538998588893&text=Ola, gostaria de fazer upgrade do meu plano&type=phone_number&app_absent=0", use_container_width=True, type="primary")
+else:
+    months = [date(2023, month + 1, 1) for month in range(12)]
+    months.extend([date(2024, month + 1, 1) for month in range(date.today().month)])
+    report_months = st.multiselect(
+        "", months, default=months[-1], placeholder="Selecione um mês de competência"
+    )
 
-    def buscar_faturamento(month: date, headers: tuple):
-        payments = get_payments(month, headers)
-        sales = get_sales(
-            month,
-            headers,
-        )
-        stocks = get_stock_by_month(month, headers)
-        return get_faturamento_data(payments, sales, stocks, bills_to_pay)
+    report_months.sort()
+    ## Generate Data
 
-    def buscar_produtos(month: date, headers: tuple):
-        stocks = get_stock_by_month(month, headers)
-        resumo = {}
+    if report_months:
+        resume = {
+            "faturamento": {f"{month.strftime('%m/%y')}": {} for month in report_months},
+            "clientes": {f"{month.strftime('%m/%y')}": {} for month in report_months},
+            "produtos": {f"{month.strftime('%m/%y')}": {} for month in report_months},
+            "serviços": {f"{month.strftime('%m/%y')}": {} for month in report_months},
+        }
 
-        for stock in stocks:
-            for move in stock.outs.moves:
-                if move.moment.date() >= month and move.moment.date() <= month.replace(
-                    day=calendar.monthrange(month.year, month.month)[-1]
-                ):
+        def buscar_faturamento(month: date, headers: tuple):
+            payments = get_payments(month, headers)
+            sales = get_sales(
+                month,
+                headers,
+            )
+            stocks = get_stock_by_month(month, headers)
+            return get_faturamento_data(payments, sales, stocks, bills_to_pay)
+
+        def buscar_produtos(month: date, headers: tuple):
+            stocks = get_stock_by_month(month, headers)
+            resumo = {}
+
+            for stock in stocks:
+                for move in stock.outs.moves:
+                    if move.moment.date() >= month and move.moment.date() <= month.replace(
+                        day=calendar.monthrange(month.year, month.month)[-1]
+                    ):
+                        try:
+                            resumo[move.product_id] += move.amount
+                        except KeyError:
+                            resumo[move.product_id] = move.amount
+
+            return resumo
+
+        def buscar_servicos(month: date, headers: tuple):
+            sales = get_sales(month, headers)
+            resumo = {}
+
+            for sale in sales:
+                for service in sale.services.items():
+                    service_data = get_service_data(service[0], headers)
                     try:
-                        resumo[move.product_id] += move.amount
+                        resumo[service_data.name] += float(service[1])
                     except KeyError:
-                        resumo[move.product_id] = move.amount
+                        resumo[service_data.name] = float(service[1])
 
-        return resumo
+            return resumo
 
-    def buscar_servicos(month: date, headers: tuple):
-        sales = get_sales(month, headers)
-        resumo = {}
+        def buscar_fidelidade(month: date, headers: tuple) -> dict:
+            sales = get_sales(month, headers)
+            resumo = {}
 
-        for sale in sales:
-            for service in sale.services.items():
-                service_data = get_service_data(service[0], headers)
+            for sale in sales:
+                customer = get_customer_data(sale.customer, headers)
                 try:
-                    resumo[service_data.name] += float(service[1])
+                    resumo[customer.get_full_name()] += sale.value
                 except KeyError:
-                    resumo[service_data.name] = float(service[1])
+                    resumo[customer.get_full_name()] = sale.value
 
-        return resumo
+            return resumo
 
-    def buscar_fidelidade(month: date, headers: tuple) -> dict:
-        sales = get_sales(month, headers)
-        resumo = {}
-
-        for sale in sales:
-            customer = get_customer_data(sale.customer, headers)
-            try:
-                resumo[customer.get_full_name()] += sale.value
-            except KeyError:
-                resumo[customer.get_full_name()] = sale.value
-
-        return resumo
-
-    try:
-        for month in report_months:
-            resume["faturamento"][month.strftime("%m/%y")] = buscar_faturamento(
-                month, headers
-            )
-            resume["clientes"][month.strftime("%m/%y")] = buscar_fidelidade(
-                month, headers
-            )
-            resume["produtos"][month.strftime("%m/%y")] = buscar_produtos(
-                month, headers
-            )
-            resume["serviços"][month.strftime("%m/%y")] = buscar_servicos(
-                month, headers
-            )
-
-        df_fat = pd.DataFrame(resume.pop("faturamento")).T
-        df_fat.loc["acumulado"] = df_fat.select_dtypes(np.number).sum()
-
-        df_clientes = pd.DataFrame(resume.pop("clientes"))
-        df_clientes.fillna(0, inplace=True)
-        df_clientes["acumulado"] = df_clientes.cumsum(axis=1).iloc[:, -1]
-        df_clientes = df_clientes.sort_values("acumulado", ascending=False)
-
-        df_produtos = pd.DataFrame(resume.pop("produtos"))
-        df_produtos.fillna(0, inplace=True)
-        df_produtos["acumulado"] = df_produtos.cumsum(axis=1).iloc[:, -1]
-        df_produtos = df_produtos.sort_values("acumulado", ascending=False)
-
-        df_servicos = pd.DataFrame(resume.pop("serviços"))
-        df_servicos.fillna(0, inplace=True)
-        df_servicos["acumulado"] = df_servicos.cumsum(axis=1).iloc[:, -1]
-        df_servicos = df_servicos.sort_values("acumulado", ascending=False)
-    except HTTPError as e:
-        if e.response.status_code == 401:
-            st.switch_page("login.py")
-        raise e
-
-    despesas_admnistrativas = df_fat["despesas"]["acumulado"]
-    custo_mercadoria_vendida = df_fat["cmv"]["acumulado"]
-    receita_bruta = df_fat["receitas"]["acumulado"]
-    descontos_totais = df_fat["descontos"]["acumulado"]
-    receita_menos_descontos = (receita_bruta - descontos_totais)
-    lucro_bruto = receita_menos_descontos - custo_mercadoria_vendida
-
-    despesas_totais = despesas_admnistrativas + custo_mercadoria_vendida
-
-    lucro_liquido = receita_menos_descontos - despesas_totais
-    discount_percent = (descontos_totais / receita_bruta if receita_bruta else 1) * 100
-
-    # Visualize geral data
-    with st.expander("Resumo Geral", expanded=True):
-        c1, c2 = st.columns(2, gap="large")
-
-        with c1:
-            st.header("DRE DUZZ COMMERCIAL")
-            st.table(df_fat)
-
-            c1.bar_chart(
-                df_fat,
-                color=("#FF5F35", "#FCAF19", "#EF4854", "#70F06D"),
-                width=500,
-                use_container_width=False,
-            )
-
-        with c2:
-            c_c1, c_c2 = c2.columns(2, gap="medium")
-            with c_c1:
-                tile = c_c1.container(border=True)
-                tile.metric(
-                    "Lucro Liquido",
-                    value=f"R$ {round(lucro_liquido, 2)}",
-                    delta=f"{round((lucro_liquido / receita_bruta if receita_bruta else 1) * 100)} %",
+        try:
+            for month in report_months:
+                resume["faturamento"][month.strftime("%m/%y")] = buscar_faturamento(
+                    month, headers
                 )
-                tile = c_c1.container(border=True)
-                tile.metric(
-                    "Receitas - Despesas",
-                    value=f"R$ {round(receita_menos_descontos - despesas_admnistrativas, 2)}",
-                    delta=f"{round(((receita_menos_descontos - despesas_admnistrativas) / despesas_admnistrativas if despesas_admnistrativas else 1) * 100)} %",
-                    delta_color="normal",
+                resume["clientes"][month.strftime("%m/%y")] = buscar_fidelidade(
+                    month, headers
                 )
-            with c_c2:
-                tile = c_c2.container(border=True)
-                tile.metric(
-                    "Descontos sobre Receita",
-                    value=f"R$ {round(descontos_totais, 2)}",
-                    delta=f"{round(discount_percent, 2)} %",
-                    delta_color="off",
+                resume["produtos"][month.strftime("%m/%y")] = buscar_produtos(
+                    month, headers
                 )
-                tile = c_c2.container(border=True)
-                
-                _cmv_delta = round(custo_mercadoria_vendida / receita_menos_descontos * 100, 2)
-                tile.metric(
-                    "CMV Sobre Receita",
-                    value=f"R$ {round(lucro_bruto, 2)}",
-                    delta=f"{_cmv_delta} %",
-                    delta_color="inverse" if _cmv_delta > 50 else "normal"
+                resume["serviços"][month.strftime("%m/%y")] = buscar_servicos(
+                    month, headers
                 )
 
-            c2.area_chart(
-                df_fat,
-                color=("#FF5F35", "#FCAF19", "#EF4854", "#70F06D"),
-                width=500,
-                use_container_width=False,
+            df_fat = pd.DataFrame(resume.pop("faturamento")).T
+            df_fat.loc["acumulado"] = df_fat.select_dtypes(np.number).sum()
+
+            df_clientes = pd.DataFrame(resume.pop("clientes"))
+            df_clientes.fillna(0, inplace=True)
+            df_clientes["acumulado"] = df_clientes.cumsum(axis=1).iloc[:, -1]
+            df_clientes = df_clientes.sort_values("acumulado", ascending=False)
+
+            df_produtos = pd.DataFrame(resume.pop("produtos"))
+            df_produtos.fillna(0, inplace=True)
+            df_produtos["acumulado"] = df_produtos.cumsum(axis=1).iloc[:, -1]
+            df_produtos = df_produtos.sort_values("acumulado", ascending=False)
+
+            df_servicos = pd.DataFrame(resume.pop("serviços"))
+            df_servicos.fillna(0, inplace=True)
+            df_servicos["acumulado"] = df_servicos.cumsum(axis=1).iloc[:, -1]
+            df_servicos = df_servicos.sort_values("acumulado", ascending=False)
+        except HTTPError as e:
+            if e.response.status_code == 401:
+                st.switch_page("login.py")
+            raise e
+
+        despesas_admnistrativas = df_fat["despesas"]["acumulado"]
+        custo_mercadoria_vendida = df_fat["cmv"]["acumulado"]
+        receita_bruta = df_fat["receitas"]["acumulado"]
+        descontos_totais = df_fat["descontos"]["acumulado"]
+        receita_menos_descontos = (receita_bruta - descontos_totais)
+        lucro_bruto = receita_menos_descontos - custo_mercadoria_vendida
+
+        despesas_totais = despesas_admnistrativas + custo_mercadoria_vendida
+
+        lucro_liquido = receita_menos_descontos - despesas_totais
+        discount_percent = (descontos_totais / receita_bruta if receita_bruta else 1) * 100
+
+        # Visualize geral data
+        with st.expander("Resumo Geral", expanded=True):
+            c1, c2 = st.columns(2, gap="large")
+
+            with c1:
+                st.header("DRE DUZZ COMMERCIAL")
+                st.table(df_fat)
+
+                c1.bar_chart(
+                    df_fat,
+                    color=("#FF5F35", "#FCAF19", "#EF4854", "#70F06D"),
+                    width=500,
+                    use_container_width=False,
+                )
+
+            with c2:
+                c_c1, c_c2 = c2.columns(2, gap="medium")
+                with c_c1:
+                    tile = c_c1.container(border=True)
+                    tile.metric(
+                        "Lucro Liquido",
+                        value=f"R$ {round(lucro_liquido, 2)}",
+                        delta=f"{round((lucro_liquido / receita_bruta if receita_bruta else 1) * 100)} %",
+                    )
+                    tile = c_c1.container(border=True)
+                    tile.metric(
+                        "Receitas - Despesas",
+                        value=f"R$ {round(receita_menos_descontos - despesas_admnistrativas, 2)}",
+                        delta=f"{round(((receita_menos_descontos - despesas_admnistrativas) / despesas_admnistrativas if despesas_admnistrativas else 1) * 100)} %",
+                        delta_color="normal",
+                    )
+                with c_c2:
+                    tile = c_c2.container(border=True)
+                    tile.metric(
+                        "Descontos sobre Receita",
+                        value=f"R$ {round(descontos_totais, 2)}",
+                        delta=f"{round(discount_percent, 2)} %",
+                        delta_color="off",
+                    )
+                    tile = c_c2.container(border=True)
+                    
+                    _cmv_delta = round(custo_mercadoria_vendida / receita_menos_descontos * 100, 2)
+                    tile.metric(
+                        "CMV Sobre Receita",
+                        value=f"R$ {round(lucro_bruto, 2)}",
+                        delta=f"{_cmv_delta} %",
+                        delta_color="inverse" if _cmv_delta > 50 else "normal"
+                    )
+
+                c2.area_chart(
+                    df_fat,
+                    color=("#FF5F35", "#FCAF19", "#EF4854", "#70F06D"),
+                    width=500,
+                    use_container_width=False,
+                )
+
+        with st.expander("Resumo Fidelidade"):
+            show_customers = st.number_input(
+                "Visualizar o top:", value=10, min_value=1, key="customers"
             )
+            st.subheader(f"TOP {show_customers} CLIENTES")
+            st.table(df_clientes.head(show_customers))
+            st.bar_chart(df_clientes.head(show_customers)["acumulado"])
 
-    with st.expander("Resumo Fidelidade"):
-        show_customers = st.number_input(
-            "Visualizar o top:", value=10, min_value=1, key="customers"
-        )
-        st.subheader(f"TOP {show_customers} CLIENTES")
-        st.table(df_clientes.head(show_customers))
-        st.bar_chart(df_clientes.head(show_customers)["acumulado"])
+        with st.expander("Resumo Produtos e Serviços"):
+            show_num = st.number_input("Visualizar o top:", value=10, min_value=1)
+            st.subheader(f"TOP {show_num} PRODUTOS MAIS VENDIDOS")
+            st.table(df_produtos.head(show_num))
 
-    with st.expander("Resumo Produtos e Serviços"):
-        show_num = st.number_input("Visualizar o top:", value=10, min_value=1)
-        st.subheader(f"TOP {show_num} PRODUTOS MAIS VENDIDOS")
-        st.table(df_produtos.head(show_num))
-
-        st.subheader(f"TOP {show_num} SERVIÇOS MAIS VENDIDOS")
-        st.table(df_servicos.head(show_num))
+            st.subheader(f"TOP {show_num} SERVIÇOS MAIS VENDIDOS")
+            st.table(df_servicos.head(show_num))
