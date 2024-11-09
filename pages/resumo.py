@@ -41,7 +41,7 @@ else:
     st.session_state.company = st.query_params.company
     st.session_state.session_token = st.query_params.session_token
 
-if st.query_params.get("embed") == "true":
+if st.query_params.get("show_navigator") == "false":
     st.markdown(
         """
     <style>

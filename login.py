@@ -6,7 +6,7 @@ from helpers.api import get_token
 st.set_page_config(
     "dcommercial - DRE", layout="wide", initial_sidebar_state="collapsed"
 )
-if st.query_params.get("embed") == "true":
+if st.query_params.get("show_navigator") == "false":
     st.markdown(
         """
     <style>
