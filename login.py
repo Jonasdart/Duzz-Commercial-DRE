@@ -6,17 +6,17 @@ from helpers.api import get_token
 st.set_page_config(
     "dcommercial - DRE", layout="wide", initial_sidebar_state="collapsed"
 )
-if st.query_params.get("show_navigator") == "false":
-    st.markdown(
-        """
-    <style>
-        [data-testid="collapsedControl"] {
-            display: none
-        }
-    </style>
-    """,
-        unsafe_allow_html=True,
-    )
+
+st.markdown(
+    """
+<style>
+    [data-testid="collapsedControl"] {
+        display: none
+    }
+</style>
+""",
+    unsafe_allow_html=True,
+)
 
 username = st.text_input("Informe seu Login")
 password = st.text_input("Informe sua senha", type="password")
