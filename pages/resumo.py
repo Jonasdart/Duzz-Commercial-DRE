@@ -107,8 +107,7 @@ except Exception as e:
     st.title("E garanta já essa e muitas outras funcionalidades! :sunglasses:")
     st.link_button("É pra já! 📲", url="https://api.whatsapp.com/send/?phone=5538998588893&text=Ola, gostaria de fazer upgrade do meu plano&type=phone_number&app_absent=0", use_container_width=True, type="primary")
 else:
-    months = [date(2023, month + 1, 1) for month in range(12)]
-    months.extend([date(2024, month + 1, 1) for month in range(date.today().month)])
+    months = [date(2024, month + 1, 1) for month in range(date.today().month)]
     report_months = st.multiselect(
         "", months, default=months[-1], placeholder="Selecione um mês de competência"
     )
