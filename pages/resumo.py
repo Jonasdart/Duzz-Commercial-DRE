@@ -277,7 +277,19 @@ else:
             c1, c2 = st.columns(2, gap="large")
 
             with c1:
-                c1.dataframe(df_fat, use_container_width=True)
+                c1.dataframe(
+                    df_fat,
+                    use_container_width=True,
+                    column_config={
+                        col: st.column_config.NumberColumn(
+                            col.title(),
+                            help=f"Total de {col.split('-')[-1].lower()} no período",
+                            step=1,
+                            format="R$ %.2f",
+                        )
+                        for col in df_fat.columns
+                    },
+                )
                 c1.area_chart(
                     df_fat.transpose(),
                     width=500,
@@ -294,10 +306,11 @@ else:
                     column_config={
                         col: st.column_config.NumberColumn(
                             col.split("-")[-1].title(),
-                            help=f"Total vendido {col.split('-')[-1].title()} no período",
+                            help=f"Total vendido {col.split('-')[-1].lower()} no período",
                             step=1,
                             format="R$ %.2f",
-                        ) for col in df_daily.columns
+                        )
+                        for col in df_daily.columns
                     },
                 )
             with c2:
