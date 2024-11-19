@@ -289,7 +289,17 @@ else:
                     use_container_width=True,
                     y="acumulado" if apenas_acumulado else None,
                 )
-                c1.dataframe(df_daily)
+                c1.dataframe(
+                    df_daily,
+                    column_config={
+                        col: st.column_config.NumberColumn(
+                            col.split("-")[-1].title(),
+                            help=f"Total vendido {col.split('-')[-1].title()} no período",
+                            step=1,
+                            format="R$ %.2f",
+                        ) for col in df_daily.columns
+                    },
+                )
             with c2:
                 c_c1, c_c2 = c2.columns(2, gap="medium")
                 with c_c1:
