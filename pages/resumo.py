@@ -17,15 +17,28 @@ from helpers.api import (
     get_headers,
     get_stocks,
 )
+from helpers import float_container
 from models.bills import Bills
 from models.enums import ReferenceTable
 from models.payments import Payment
 import streamlit as st
+import plotly.express as px
 import pandas as pd
 import numpy as np
 
 from models.sales import Sale
 from models.stocks import Stock
+
+days = [
+    "7 - Domingo",
+    "1 - Segunda",
+    "2 - Terça",
+    "3 - Quarta",
+    "4 - Quinta",
+    "5 - Sexta",
+    "6 - Sábado",
+]
+# days = list(range(7))
 
 
 st.set_page_config(
@@ -65,12 +78,16 @@ def get_faturamento_data(
     discounts: decimal = 0
     expenses: decimal = 0
     cogs = 0
+    daily = {day: 0 for day in days}
     for stock in stocks:
         for move in stock.outs.moves:
             if move.moment.date() >= month and move.moment.date() <= month.replace(
                 day=calendar.monthrange(month.year, month.month)[-1]
             ):
                 cogs += move.value
+
+    for sale in sales:
+        daily[days[sale.moment.weekday()]] += sale.value
 
     for payment in payments:
         if payment.reference_table is ReferenceTable.SALES:
@@ -91,15 +108,16 @@ def get_faturamento_data(
                     expenses += payment.value
 
     return {
+        **{day: daily.get(day, 0) for day in [*days[1:], days[0]]},
         "receitas": revenues,
         "despesas": expenses,
         "descontos": discounts,
         "cmv": cogs,
+        "vendas": len(sales),
     }
 
-headers = get_headers(
-    st.session_state["company"], st.session_state["session_token"]
-)
+
+headers = get_headers(st.session_state["company"], st.session_state["session_token"])
 
 try:
     bills_to_pay = get_bills(headers)
@@ -107,7 +125,12 @@ except Exception as e:
     st.balloons()
     st.title("Faça o :blue[Upgrade]⬆️ do seu plano!")
     st.title("E garanta já essa e muitas outras funcionalidades! :sunglasses:")
-    st.link_button("É pra já! 📲", url="https://api.whatsapp.com/send/?phone=5538998588893&text=Ola, gostaria de fazer upgrade do meu plano&type=phone_number&app_absent=0", use_container_width=True, type="primary")
+    st.link_button(
+        "É pra já! 📲",
+        url="https://api.whatsapp.com/send/?phone=5538998588893&text=Ola, gostaria de fazer upgrade do meu plano&type=phone_number&app_absent=0",
+        use_container_width=True,
+        type="primary",
+    )
 else:
     months = [date(2024, month + 1, 1) for month in range(date.today().month)]
     report_months = st.multiselect(
@@ -119,7 +142,10 @@ else:
 
     if report_months:
         resume = {
-            "faturamento": {f"{month.strftime('%m/%y')}": {} for month in report_months},
+            "daily": {f"{month.strftime('%m/%y')}": {} for month in report_months},
+            "faturamento": {
+                f"{month.strftime('%m/%y')}": {} for month in report_months
+            },
             "clientes": {f"{month.strftime('%m/%y')}": {} for month in report_months},
             "produtos": {f"{month.strftime('%m/%y')}": {} for month in report_months},
             "serviços": {f"{month.strftime('%m/%y')}": {} for month in report_months},
@@ -140,8 +166,12 @@ else:
 
             for stock in stocks:
                 for move in stock.outs.moves:
-                    if move.moment.date() >= month and move.moment.date() <= month.replace(
-                        day=calendar.monthrange(month.year, month.month)[-1]
+                    if (
+                        move.moment.date() >= month
+                        and move.moment.date()
+                        <= month.replace(
+                            day=calendar.monthrange(month.year, month.month)[-1]
+                        )
                     ):
                         try:
                             resumo[move.product_id] += move.amount
@@ -179,9 +209,15 @@ else:
 
         try:
             for month in report_months:
-                resume["faturamento"][month.strftime("%m/%y")] = buscar_faturamento(
-                    month, headers
-                )
+                faturamento_data = buscar_faturamento(month, headers)
+                total_vendas = faturamento_data.pop("vendas")
+                resume["faturamento"][month.strftime("%m/%y")] = {
+                    "receitas": faturamento_data.pop("receitas"),
+                    "despesas": faturamento_data.pop("despesas"),
+                    "descontos": faturamento_data.pop("descontos"),
+                    "cmv": faturamento_data.pop("cmv"),
+                }
+                resume["daily"][month.strftime("%m/%y")] = faturamento_data
                 resume["clientes"][month.strftime("%m/%y")] = buscar_fidelidade(
                     month, headers
                 )
@@ -194,6 +230,10 @@ else:
 
             df_fat = pd.DataFrame(resume.pop("faturamento")).T
             df_fat.loc["acumulado"] = df_fat.select_dtypes(np.number).sum()
+
+            df_daily = pd.DataFrame(resume.pop("daily")).T
+            df_daily.fillna(0, inplace=True)
+            df_daily.loc["acumulado"] = df_daily.select_dtypes(np.number).sum()
 
             df_clientes = pd.DataFrame(resume.pop("clientes"))
             df_clientes.fillna(0, inplace=True)
@@ -218,29 +258,38 @@ else:
         custo_mercadoria_vendida = df_fat["cmv"]["acumulado"]
         receita_bruta = df_fat["receitas"]["acumulado"]
         descontos_totais = df_fat["descontos"]["acumulado"]
-        receita_menos_descontos = (receita_bruta - descontos_totais)
+        receita_menos_descontos = receita_bruta - descontos_totais
         lucro_bruto = receita_menos_descontos - custo_mercadoria_vendida
 
         despesas_totais = despesas_admnistrativas + custo_mercadoria_vendida
 
         lucro_liquido = receita_menos_descontos - despesas_totais
-        discount_percent = (descontos_totais / receita_bruta if receita_bruta else 1) * 100
+        discount_percent = (
+            descontos_totais / receita_bruta if receita_bruta else 1
+        ) * 100
 
         # Visualize geral data
+        with float_container.sticky_container(position="top", border=False):
+            st.header(st.query_params.pseudonym.upper())
+            apenas_acumulado = st.toggle("Ver apenas o acumulado")
+
         with st.expander("Resumo Geral", expanded=True):
             c1, c2 = st.columns(2, gap="large")
 
             with c1:
-                st.header(f"DRE {st.query_params.pseudonym.upper()}")
-                st.table(df_fat)
-
-                c1.bar_chart(
-                    df_fat,
-                    color=("#FF5F35", "#FCAF19", "#EF4854", "#70F06D"),
+                c1.dataframe(df_fat, use_container_width=True)
+                c1.area_chart(
+                    df_fat.transpose(),
                     width=500,
                     use_container_width=False,
+                    y="acumulado" if apenas_acumulado else None,
                 )
-
+                c1.area_chart(
+                    df_daily.transpose(),
+                    use_container_width=True,
+                    y="acumulado" if apenas_acumulado else None,
+                )
+                c1.dataframe(df_daily)
             with c2:
                 c_c1, c_c2 = c2.columns(2, gap="medium")
                 with c_c1:
@@ -257,6 +306,25 @@ else:
                         delta=f"{round(((receita_menos_descontos - despesas_admnistrativas) / despesas_admnistrativas if despesas_admnistrativas else 1) * 100)} %",
                         delta_color="normal",
                     )
+
+                    ticket_medio_delta = round(
+                        (
+                            round(receita_menos_descontos / total_vendas, 2)
+                            / round(despesas_admnistrativas / total_vendas, 2)
+                        )
+                    )
+                    tile = c_c1.container(border=True)
+                    tile.metric(
+                        "Ticket Médio",
+                        value=f"R$ {round(receita_menos_descontos / total_vendas, 2)}",
+                        delta=f"{ticket_medio_delta} %",
+                        delta_color="inverse"
+                        if ticket_medio_delta <= 2
+                        else "off"
+                        if ticket_medio_delta < 3
+                        else "normal",
+                        help="É o valor médio recebido por cliente em cada compra, calculado dividindo o total das vendas pelo número de vendas realizadas",
+                    )
                 with c_c2:
                     tile = c_c2.container(border=True)
                     tile.metric(
@@ -266,34 +334,75 @@ else:
                         delta_color="off",
                     )
                     tile = c_c2.container(border=True)
-                    
-                    _cmv_delta = round(custo_mercadoria_vendida / receita_menos_descontos * 100, 2)
+
+                    _cmv_delta = round(
+                        custo_mercadoria_vendida / receita_menos_descontos * 100, 2
+                    )
                     tile.metric(
                         "CMV Sobre Receita",
                         value=f"R$ {round(lucro_bruto, 2)}",
                         delta=f"{_cmv_delta} %",
-                        delta_color="inverse" if _cmv_delta > 50 else "normal"
+                        delta_color="inverse" if _cmv_delta > 50 else "normal",
                     )
 
-                c2.area_chart(
-                    df_fat,
-                    color=("#FF5F35", "#FCAF19", "#EF4854", "#70F06D"),
-                    width=500,
-                    use_container_width=False,
+                    tile = c_c2.container(border=True)
+                    custo_ticket_delta = round(
+                        (
+                            round(despesas_admnistrativas / total_vendas, 2)
+                            / round(receita_menos_descontos / total_vendas, 2)
+                        )
+                        * 100
+                    )
+                    tile.metric(
+                        "Custo Ticket",
+                        value=f"R$ {round(despesas_admnistrativas / total_vendas, 2)}",
+                        delta=f"{custo_ticket_delta} %",
+                        delta_color="inverse" if custo_ticket_delta > 30 else "normal",
+                        help="Representa o gasto médio em despesas operacionais para realizar cada venda. É calculado dividindo as despesas operacionais pelo número total de vendas realizadas.",
+                    )
+                fig = px.pie(
+                    df_daily.transpose(),
+                    names=[day.split("-")[-1] for day in df_daily.columns],
+                    values="acumulado",
+                    title=f"Vendas por dia da semana",
                 )
-
+                c2.plotly_chart(fig, use_container_width=True)
         with st.expander("Resumo Fidelidade"):
-            show_customers = st.number_input(
-                "Visualizar o top:", value=10, min_value=1, key="customers"
+            show_customers = st.slider(
+                "Visualizar o top:",
+                min_value=1,
+                max_value=100,
+                value=10,
+                key="customers",
             )
             st.subheader(f"TOP {show_customers} CLIENTES")
-            st.table(df_clientes.head(show_customers))
-            st.bar_chart(df_clientes.head(show_customers)["acumulado"])
+            st.dataframe(df_clientes.head(show_customers))
+            st.bar_chart(
+                df_clientes.head(show_customers),
+                y="acumulado" if apenas_acumulado else None,
+            )
 
         with st.expander("Resumo Produtos e Serviços"):
-            show_num = st.number_input("Visualizar o top:", value=10, min_value=1)
-            st.subheader(f"TOP {show_num} PRODUTOS MAIS VENDIDOS")
-            st.table(df_produtos.head(show_num))
+            show_items = st.slider(
+                "Visualizar o top:",
+                min_value=1,
+                max_value=100,
+                value=10,
+                key="items",
+            )
+            i_c1, i_c2 = st.columns(2)
+            with i_c1:
+                i_c1.subheader(f"TOP {show_items} PRODUTOS MAIS VENDIDOS")
+                i_c1.dataframe(df_produtos.head(show_items))
+                i_c1.area_chart(
+                    df_produtos.head(show_items),
+                    y="acumulado" if apenas_acumulado else None,
+                )
 
-            st.subheader(f"TOP {show_num} SERVIÇOS MAIS VENDIDOS")
-            st.table(df_servicos.head(show_num))
+            with i_c2:
+                i_c2.subheader(f"TOP {show_items} SERVIÇOS MAIS VENDIDOS")
+                i_c2.dataframe(df_servicos.head(show_items))
+                i_c2.area_chart(
+                    df_servicos.head(show_items),
+                    y="acumulado" if apenas_acumulado else None,
+                )
