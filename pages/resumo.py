@@ -293,7 +293,7 @@ else:
                 c1.area_chart(
                     df_fat.transpose(),
                     width=500,
-                    use_container_width=False,
+                    use_container_width=True,
                     y="acumulado" if apenas_acumulado else None,
                 )
                 c1.area_chart(
@@ -403,6 +403,7 @@ else:
             st.bar_chart(
                 df_clientes.head(show_customers),
                 y="acumulado" if apenas_acumulado else None,
+                use_container_width=True
             )
 
         with st.expander("Resumo Produtos e Serviços"):
@@ -420,6 +421,7 @@ else:
                 i_c1.area_chart(
                     df_produtos.head(show_items),
                     y="acumulado" if apenas_acumulado else None,
+                    use_container_width=True
                 )
 
             with i_c2:
@@ -428,4 +430,5 @@ else:
                 i_c2.area_chart(
                     df_servicos.head(show_items),
                     y="acumulado" if apenas_acumulado else None,
+                    use_container_width=True
                 )
