@@ -38,6 +38,13 @@ days = [
     "5 - Sexta",
     "6 - Sábado",
 ]
+
+periods = {
+    "madrugada": ((0, 0), (5, 59)),
+    "manha": ((6, 0), (11, 59)),
+    "tarde": ((12, 0), (17, 59)),
+    "noite": ((18, 0), (23, 59)),
+}
 # days = list(range(7))
 
 
@@ -55,6 +62,8 @@ else:
     st.session_state.company = st.query_params.company
     st.session_state.session_token = st.query_params.session_token
     st.session_state.pseudonym = st.query_params.pseudonym
+
+st.header(st.query_params.pseudonym.upper())
 
 st.markdown(
     """
@@ -79,6 +88,7 @@ def get_faturamento_data(
     expenses: decimal = 0
     cogs = 0
     daily = {day: 0 for day in days}
+    by_period = {period: 0 for period in periods}
     for stock in stocks:
         for move in stock.outs.moves:
             if move.moment.date() >= month and move.moment.date() <= month.replace(
@@ -87,6 +97,12 @@ def get_faturamento_data(
                 cogs += move.value
 
     for sale in sales:
+        for period in periods:
+            if (
+                sale.moment.hour >= periods[period][0][0]
+                and sale.moment.hour <= periods[period][1][0]
+            ):
+                by_period[period] += sale.value
         daily[days[sale.moment.weekday()]] += sale.value
 
     for payment in payments:
@@ -109,6 +125,7 @@ def get_faturamento_data(
 
     return {
         **{day: daily.get(day, 0) for day in [*days[1:], days[0]]},
+        "by_periods": by_period,
         "receitas": revenues,
         "despesas": expenses,
         "descontos": discounts,
@@ -143,6 +160,7 @@ else:
     if report_months:
         resume = {
             "daily": {f"{month.strftime('%m/%y')}": {} for month in report_months},
+            "by_period": {f"{month.strftime('%m/%y')}": {} for month in report_months},
             "faturamento": {
                 f"{month.strftime('%m/%y')}": {} for month in report_months
             },
@@ -217,6 +235,9 @@ else:
                     "descontos": faturamento_data.pop("descontos"),
                     "cmv": faturamento_data.pop("cmv"),
                 }
+                resume["by_period"][month.strftime("%m/%y")] = faturamento_data.pop(
+                    "by_periods"
+                )
                 resume["daily"][month.strftime("%m/%y")] = faturamento_data
                 resume["clientes"][month.strftime("%m/%y")] = buscar_fidelidade(
                     month, headers
@@ -234,6 +255,10 @@ else:
             df_daily = pd.DataFrame(resume.pop("daily")).T
             df_daily.fillna(0, inplace=True)
             df_daily.loc["acumulado"] = df_daily.select_dtypes(np.number).sum()
+
+            df_period = pd.DataFrame(resume.pop("by_period")).T
+            df_period.fillna(0, inplace=True)
+            df_period.loc["acumulado"] = df_period.select_dtypes(np.number).sum()
 
             df_clientes = pd.DataFrame(resume.pop("clientes"))
             df_clientes.fillna(0, inplace=True)
@@ -270,7 +295,6 @@ else:
 
         # Visualize geral data
         with float_container.sticky_container(position="top", border=False):
-            st.header(st.query_params.pseudonym.upper())
             apenas_acumulado = st.toggle("Ver apenas o acumulado")
 
         with st.expander("Resumo Geral", expanded=True):
@@ -312,6 +336,14 @@ else:
                         )
                         for col in df_daily.columns
                     },
+                    use_container_width=True,
+                )
+
+                c1.subheader("Vendas por período do dia")
+                c1.area_chart(
+                    df_period.transpose(),
+                    use_container_width=True,
+                    y="acumulado" if apenas_acumulado else None,
                 )
             with c2:
                 c_c1, c_c2 = c2.columns(2, gap="medium")
@@ -390,6 +422,27 @@ else:
                     title=f"Vendas por dia da semana",
                 )
                 c2.plotly_chart(fig, use_container_width=True)
+
+                fig = px.pie(
+                    df_period.transpose(),
+                    names=[period for period in df_period.columns],
+                    values="acumulado",
+                    title=f"Vendas por período do dia",
+                )
+                c2.plotly_chart(fig, use_container_width=True)
+            st.dataframe(
+                        df_period,
+                        column_config={
+                            col: st.column_config.NumberColumn(
+                                col.split("-")[-1].title(),
+                                help=f"Total vendido {col.split('-')[-1].lower()} no horário",
+                                step=1,
+                                format="R$ %.2f",
+                            )
+                            for col in df_daily.columns
+                        },
+                        use_container_width=True,
+                    )
         with st.expander("Resumo Fidelidade"):
             show_customers = st.slider(
                 "Visualizar o top:",
@@ -403,7 +456,7 @@ else:
             st.bar_chart(
                 df_clientes.head(show_customers),
                 y="acumulado" if apenas_acumulado else None,
-                use_container_width=True
+                use_container_width=True,
             )
 
         with st.expander("Resumo Produtos e Serviços"):
@@ -421,7 +474,7 @@ else:
                 i_c1.area_chart(
                     df_produtos.head(show_items),
                     y="acumulado" if apenas_acumulado else None,
-                    use_container_width=True
+                    use_container_width=True,
                 )
 
             with i_c2:
@@ -430,5 +483,5 @@ else:
                 i_c2.area_chart(
                     df_servicos.head(show_items),
                     y="acumulado" if apenas_acumulado else None,
-                    use_container_width=True
+                    use_container_width=True,
                 )
