@@ -19,7 +19,7 @@ from helpers.api import (
 )
 from helpers import float_container
 from models.bills import Bills
-from models.enums import ReferenceTable
+from models.enums import PaymentsMethods, ReferenceTable
 from models.payments import Payment
 import streamlit as st
 import plotly.express as px
@@ -89,6 +89,7 @@ def get_faturamento_data(
     cogs = 0
     daily = {day: 0 for day in days}
     by_period = {period: 0 for period in periods}
+    by_payment_methods = {payment: 0 for payment in PaymentsMethods.__members__}
     for stock in stocks:
         for move in stock.outs.moves:
             if move.moment.date() >= month and move.moment.date() <= month.replace(
@@ -114,6 +115,7 @@ def get_faturamento_data(
                 continue
             revenues += sale.discount
             discounts += sale.discount
+            by_payment_methods[payment.payment_method.name] += payment.value
 
         if payment.reference_table is ReferenceTable.BILLS_TO_PAY:
             for bill in bills_to_pay:
@@ -125,6 +127,7 @@ def get_faturamento_data(
 
     return {
         **{day: daily.get(day, 0) for day in [*days[1:], days[0]]},
+        "by_payment_methods": by_payment_methods,
         "by_periods": by_period,
         "receitas": revenues,
         "despesas": expenses,
@@ -161,6 +164,9 @@ else:
         resume = {
             "daily": {f"{month.strftime('%m/%y')}": {} for month in report_months},
             "by_period": {f"{month.strftime('%m/%y')}": {} for month in report_months},
+            "by_payment_methods": {
+                f"{month.strftime('%m/%y')}": {} for month in report_months
+            },
             "faturamento": {
                 f"{month.strftime('%m/%y')}": {} for month in report_months
             },
@@ -238,6 +244,9 @@ else:
                 resume["by_period"][month.strftime("%m/%y")] = faturamento_data.pop(
                     "by_periods"
                 )
+                resume["by_payment_methods"][
+                    month.strftime("%m/%y")
+                ] = faturamento_data.pop("by_payment_methods")
                 resume["daily"][month.strftime("%m/%y")] = faturamento_data
                 resume["clientes"][month.strftime("%m/%y")] = buscar_fidelidade(
                     month, headers
@@ -259,6 +268,12 @@ else:
             df_period = pd.DataFrame(resume.pop("by_period")).T
             df_period.fillna(0, inplace=True)
             df_period.loc["acumulado"] = df_period.select_dtypes(np.number).sum()
+
+            df_payment_methods = pd.DataFrame(resume.pop("by_payment_methods")).T
+            df_payment_methods.fillna(0, inplace=True)
+            df_payment_methods.loc["acumulado"] = df_payment_methods.select_dtypes(
+                np.number
+            ).sum()
 
             df_clientes = pd.DataFrame(resume.pop("clientes"))
             df_clientes.fillna(0, inplace=True)
@@ -345,6 +360,12 @@ else:
                     use_container_width=True,
                     y="acumulado" if apenas_acumulado else None,
                 )
+                c1.subheader("Entradas por método de pagamento")
+                c1.area_chart(
+                    df_payment_methods.transpose(),
+                    use_container_width=True,
+                    y="acumulado" if apenas_acumulado else None,
+                )
             with c2:
                 c_c1, c_c2 = c2.columns(2, gap="medium")
                 with c_c1:
@@ -366,6 +387,8 @@ else:
                         (
                             round(receita_menos_descontos / total_vendas, 2)
                             / round(despesas_admnistrativas / total_vendas, 2)
+                            if despesas_admnistrativas
+                            else 1
                         )
                     )
                     tile = c_c1.container(border=True)
@@ -430,19 +453,27 @@ else:
                     title=f"Vendas por período do dia",
                 )
                 c2.plotly_chart(fig, use_container_width=True)
+
+                fig = px.pie(
+                    df_payment_methods.transpose(),
+                    names=[method for method in df_payment_methods.columns],
+                    values="acumulado",
+                    title=f"Entradas por método de pagamento",
+                )
+                c2.plotly_chart(fig, use_container_width=True)
             st.dataframe(
-                        df_period,
-                        column_config={
-                            col: st.column_config.NumberColumn(
-                                col.split("-")[-1].title(),
-                                help=f"Total vendido {col.split('-')[-1].lower()} no horário",
-                                step=1,
-                                format="R$ %.2f",
-                            )
-                            for col in df_daily.columns
-                        },
-                        use_container_width=True,
+                df_period,
+                column_config={
+                    col: st.column_config.NumberColumn(
+                        col.split("-")[-1].title(),
+                        help=f"Total vendido {col.split('-')[-1].lower()} no horário",
+                        step=1,
+                        format="R$ %.2f",
                     )
+                    for col in df_daily.columns
+                },
+                use_container_width=True,
+            )
         with st.expander("Resumo Fidelidade"):
             show_customers = st.slider(
                 "Visualizar o top:",
