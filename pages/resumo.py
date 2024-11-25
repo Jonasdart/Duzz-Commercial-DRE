@@ -40,10 +40,10 @@ days = [
 ]
 
 periods = {
-    "madrugada": ((0, 0), (5, 59)),
     "manha": ((6, 0), (11, 59)),
     "tarde": ((12, 0), (17, 59)),
     "noite": ((18, 0), (23, 59)),
+    "madrugada": ((0, 0), (5, 59)),
 }
 # days = list(range(7))
 
