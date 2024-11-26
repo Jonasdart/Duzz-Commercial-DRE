@@ -30,13 +30,13 @@ from models.sales import Sale
 from models.stocks import Stock
 
 days = [
-    "7 - Domingo",
     "1 - Segunda",
     "2 - Terça",
     "3 - Quarta",
     "4 - Quinta",
     "5 - Sexta",
     "6 - Sábado",
+    "7 - Domingo",
 ]
 
 periods = {
@@ -103,8 +103,9 @@ def get_faturamento_data(
                 sale.moment.hour >= periods[period][0][0]
                 and sale.moment.hour <= periods[period][1][0]
             ):
-                by_period[period] += sale.value
-        daily[days[sale.moment.weekday()]] += sale.value
+                by_period[period] += sale.value + sale.discount
+
+        daily[days[sale.moment.weekday()]] += sale.value + sale.discount
 
     for payment in payments:
         if payment.reference_table is ReferenceTable.SALES:
