@@ -428,6 +428,8 @@ else:
                         (
                             round(despesas_admnistrativas / total_vendas, 2)
                             / round(receita_menos_descontos / total_vendas, 2)
+                            if receita_menos_descontos
+                            else 1
                         )
                         * 100
                     )
