@@ -153,7 +153,8 @@ except Exception as e:
         type="primary",
     )
 else:
-    months = [date(2024, month + 1, 1) for month in range(date.today().month)]
+    months = [date(2024, month + 1, 1) for month in range(12)]
+    months += [date(date.today().year, month + 1, 1) for month in range(date.today().month)]
     report_months = st.multiselect(
         "", months, default=months[-1], placeholder="Selecione um mês de competência"
     )
