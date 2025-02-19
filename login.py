@@ -29,7 +29,7 @@ if username and password and company:
         st.error("Usuário/Senha ou o ID da empresa estão incorretos", icon="🚨")
     else:
         st.success("Logado com sucesso", icon="✅")
-        sleep(1)
+        sleep(0.5)
         st.session_state.company = company
         st.session_state.session_token = session_token
         st.session_state.pseudonym = pseudonym
