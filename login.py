@@ -4,7 +4,7 @@ import streamlit as st
 from helpers.api import get_token
 
 st.set_page_config(
-    "dcommercial - DRE", layout="wide", initial_sidebar_state="collapsed"
+    "Visão Geral", layout="wide", initial_sidebar_state="collapsed"
 )
 
 st.markdown(
