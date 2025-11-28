@@ -37,6 +37,6 @@ def sticky_container(
     html_code = STICKY_CONTAINER_HTML.format(position=position, margin=margin, i=count)
     count += 1
 
-    container = st.container(height=height, border=border)
+    container = st.container(border=border)
     container.markdown(html_code, unsafe_allow_html=True)
     return container
