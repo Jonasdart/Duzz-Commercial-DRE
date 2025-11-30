@@ -63,3 +63,21 @@ class ServicosSuccessResponse(SuccessResponse):
 class FidelidadeSuccessResponse(SuccessResponse):
     """Success response for fidelidade endpoints"""
     data: FidelidadeResponse
+
+class MetricaItem(BaseModel):
+    """Individual metric item with value and percentage"""
+    valor: Decimal
+    porcentagem: Decimal
+
+class MetricasCalculadasResponse(BaseModel):
+    """Response model for calculated metrics"""
+    lucro_liquido: MetricaItem
+    receitas_menos_despesas: MetricaItem
+    ticket_medio: MetricaItem
+    descontos_sobre_receita: MetricaItem
+    cmv_sobre_receita: MetricaItem
+    custo_ticket: MetricaItem
+
+class MetricasCalculadasSuccessResponse(SuccessResponse):
+    """Success response for calculated metrics endpoints"""
+    data: MetricasCalculadasResponse
