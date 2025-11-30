@@ -1,7 +1,7 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2025-11-30T19:05:00.000Z",
+  "__export_date": "2025-11-30T19:30:00.000Z",
   "__export_source": "insomnia.desktop.app:v2023.5.8",
   "resources": [
     {
@@ -143,7 +143,7 @@
       "parameters": [
         {
           "name": "month",
-          "value": "2024-01-01",
+          "value": "2025-11-01",
           "description": "Mês de referência no formato YYYY-MM-DD"
         }
       ],
@@ -169,19 +169,34 @@
       "_type": "request"
     },
     {
-      "_id": "req_post_faturamento_process",
-      "parentId": "fld_faturamento",
+      "_id": "fld_metricas",
+      "parentId": "wrk_1234567890abcdef",
       "modified": 1732998300000,
       "created": 1732998300000,
-      "url": "{{ base_url }}/api/faturamento/process",
-      "name": "POST Processar Faturamento",
-      "description": "Processa dados brutos de faturamento",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"payments\": [\n    {\n      \"id\": 1,\n      \"value\": 150.50,\n      \"payment_method\": \"PIX\",\n      \"reference_table\": \"SALES\",\n      \"reference_id\": 1001\n    }\n  ],\n  \"sales\": [\n    {\n      \"id\": 1001,\n      \"value\": 150.50,\n      \"discount\": 10.00,\n      \"moment\": \"2024-01-15T14:30:00\",\n      \"customer\": 5001,\n      \"services\": {},\n      \"products\": {}\n    }\n  ],\n  \"stocks\": [\n    {\n      \"id\": 2001,\n      \"outs\": {\n        \"moves\": [\n          {\n            \"moment\": \"2024-01-10T10:00:00\",\n            \"value\": 50.00,\n            \"amount\": 2,\n            \"product_id\": 3001\n          }\n        ]\n      }\n    }\n  ],\n  \"bills_to_pay\": [\n    {\n      \"id\": 4001,\n      \"value\": 200.00,\n      \"reference_table\": \"BILLS_TO_PAY\"\n    }\n  ]\n}"
-      },
-      "parameters": [],
+      "name": "Métricas Calculadas",
+      "description": "Endpoints com métricas de negócio calculadas",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2500000000000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_get_metricas",
+      "parentId": "fld_metricas",
+      "modified": 1732998300000,
+      "created": 1732998300000,
+      "url": "{{ base_url }}/api/metricas",
+      "name": "GET Métricas Calculadas",
+      "description": "Busca todas as métricas de negócio calculadas para um mês",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "month",
+          "value": "2025-11-01",
+          "description": "Mês de referência no formato YYYY-MM-DD"
+        }
+      ],
       "headers": [
         {
           "name": "sessiontoken",
@@ -190,14 +205,10 @@
         {
           "name": "company",
           "value": "{{ company }}"
-        },
-        {
-          "name": "Content-Type",
-          "value": "application/json"
         }
       ],
       "authentication": {},
-      "metaSortKey": 2000000000001,
+      "metaSortKey": 2500000000000,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -232,7 +243,7 @@
       "parameters": [
         {
           "name": "month",
-          "value": "2024-01-01",
+          "value": "2025-11-01",
           "description": "Mês de referência no formato YYYY-MM-DD"
         }
       ],
@@ -282,7 +293,7 @@
       "parameters": [
         {
           "name": "month",
-          "value": "2024-01-01",
+          "value": "2025-11-01",
           "description": "Mês de referência no formato YYYY-MM-DD"
         }
       ],
@@ -332,7 +343,7 @@
       "parameters": [
         {
           "name": "month",
-          "value": "2024-01-01",
+          "value": "2025-11-01",
           "description": "Mês de referência no formato YYYY-MM-DD"
         }
       ],
