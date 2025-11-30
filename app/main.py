@@ -4,6 +4,7 @@ from app.routes.faturamento import router as faturamento_router
 from app.routes.produtos import router as produtos_router
 from app.routes.servicos import router as servicos_router
 from app.routes.fidelidade import router as fidelidade_router
+from app.routes.metricas import router as metricas_router
 from app.utils.auth import validate_token
 
 app = FastAPI(title="Duzz Commercial BFF API", version="1.0.0")
@@ -52,6 +53,7 @@ app.include_router(faturamento_router, prefix="/api")
 app.include_router(produtos_router, prefix="/api")
 app.include_router(servicos_router, prefix="/api")
 app.include_router(fidelidade_router, prefix="/api")
+app.include_router(metricas_router, prefix="/api")
 
 @app.get("/")
 def read_root():
