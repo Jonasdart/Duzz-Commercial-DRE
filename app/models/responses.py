@@ -27,7 +27,7 @@ class FaturamentoResponse(BaseModel):
 
 class ProdutosResponse(BaseModel):
     """Response model for product sales summary"""
-    products: Dict[int, int]
+    products: Dict[str, int]
 
 class ServicosResponse(BaseModel):
     """Response model for service sales summary"""
