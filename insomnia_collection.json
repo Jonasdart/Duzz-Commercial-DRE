@@ -1,0 +1,361 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2025-11-30T19:05:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "req_d7f8a1b2c3d4e5f6a7b8c9d0",
+      "parentId": "wrk_1234567890abcdef",
+      "modified": 1732998300000,
+      "created": 1732998300000,
+      "url": "http://localhost:8000",
+      "name": "Base URL",
+      "description": "URL base da API Duzz Commercial BFF",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1000000000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "wrk_1234567890abcdef",
+      "parentId": null,
+      "modified": 1732998300000,
+      "created": 1732998300000,
+      "name": "Duzz Commercial BFF API",
+      "description": "Coleção para testar a API BFF do Duzz Commercial",
+      "scope": "collection",
+      "_type": "workspace"
+    },
+    {
+      "_id": "env_1234567890abcdef",
+      "parentId": "wrk_1234567890abcdef",
+      "modified": 1732998300000,
+      "created": 1732998300000,
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8000",
+        "sessiontoken": "seu_token_aqui",
+        "company": "sua_empresa_aqui"
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "base_url",
+          "sessiontoken",
+          "company"
+        ]
+      },
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1000000000000,
+      "_type": "environment"
+    },
+    {
+      "_id": "fld_health_checks",
+      "parentId": "wrk_1234567890abcdef",
+      "modified": 1732998300000,
+      "created": 1732998300000,
+      "name": "Health Checks",
+      "description": "Endpoints de verificação de saúde da API",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1000000000000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_health_check",
+      "parentId": "fld_health_checks",
+      "modified": 1732998300000,
+      "created": 1732998300000,
+      "url": "{{ base_url }}/health",
+      "name": "Health Check",
+      "description": "Verifica se a API está funcionando",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 1000000000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_root",
+      "parentId": "fld_health_checks",
+      "modified": 1732998300000,
+      "created": 1732998300000,
+      "url": "{{ base_url }}/",
+      "name": "Root Endpoint",
+      "description": "Endpoint raiz da API",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 1000000000001,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_faturamento",
+      "parentId": "wrk_1234567890abcdef",
+      "modified": 1732998300000,
+      "created": 1732998300000,
+      "name": "Faturamento",
+      "description": "Endpoints relacionados a dados de faturamento",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2000000000000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_get_faturamento",
+      "parentId": "fld_faturamento",
+      "modified": 1732998300000,
+      "created": 1732998300000,
+      "url": "{{ base_url }}/api/faturamento",
+      "name": "GET Faturamento",
+      "description": "Busca dados de faturamento para um mês específico",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "month",
+          "value": "2024-01-01",
+          "description": "Mês de referência no formato YYYY-MM-DD"
+        }
+      ],
+      "headers": [
+        {
+          "name": "sessiontoken",
+          "value": "{{ sessiontoken }}"
+        },
+        {
+          "name": "company",
+          "value": "{{ company }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 2000000000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_post_faturamento_process",
+      "parentId": "fld_faturamento",
+      "modified": 1732998300000,
+      "created": 1732998300000,
+      "url": "{{ base_url }}/api/faturamento/process",
+      "name": "POST Processar Faturamento",
+      "description": "Processa dados brutos de faturamento",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"payments\": [\n    {\n      \"id\": 1,\n      \"value\": 150.50,\n      \"payment_method\": \"PIX\",\n      \"reference_table\": \"SALES\",\n      \"reference_id\": 1001\n    }\n  ],\n  \"sales\": [\n    {\n      \"id\": 1001,\n      \"value\": 150.50,\n      \"discount\": 10.00,\n      \"moment\": \"2024-01-15T14:30:00\",\n      \"customer\": 5001,\n      \"services\": {},\n      \"products\": {}\n    }\n  ],\n  \"stocks\": [\n    {\n      \"id\": 2001,\n      \"outs\": {\n        \"moves\": [\n          {\n            \"moment\": \"2024-01-10T10:00:00\",\n            \"value\": 50.00,\n            \"amount\": 2,\n            \"product_id\": 3001\n          }\n        ]\n      }\n    }\n  ],\n  \"bills_to_pay\": [\n    {\n      \"id\": 4001,\n      \"value\": 200.00,\n      \"reference_table\": \"BILLS_TO_PAY\"\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "sessiontoken",
+          "value": "{{ sessiontoken }}"
+        },
+        {
+          "name": "company",
+          "value": "{{ company }}"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 2000000000001,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_produtos",
+      "parentId": "wrk_1234567890abcdef",
+      "modified": 1732998300000,
+      "created": 1732998300000,
+      "name": "Produtos",
+      "description": "Endpoints relacionados a vendas de produtos",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 3000000000000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_get_produtos",
+      "parentId": "fld_produtos",
+      "modified": 1732998300000,
+      "created": 1732998300000,
+      "url": "{{ base_url }}/api/produtos",
+      "name": "GET Produtos",
+      "description": "Busca resumo de vendas de produtos por mês",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "month",
+          "value": "2024-01-01",
+          "description": "Mês de referência no formato YYYY-MM-DD"
+        }
+      ],
+      "headers": [
+        {
+          "name": "sessiontoken",
+          "value": "{{ sessiontoken }}"
+        },
+        {
+          "name": "company",
+          "value": "{{ company }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 3000000000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_servicos",
+      "parentId": "wrk_1234567890abcdef",
+      "modified": 1732998300000,
+      "created": 1732998300000,
+      "name": "Serviços",
+      "description": "Endpoints relacionados a vendas de serviços",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 4000000000000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_get_servicos",
+      "parentId": "fld_servicos",
+      "modified": 1732998300000,
+      "created": 1732998300000,
+      "url": "{{ base_url }}/api/servicos",
+      "name": "GET Serviços",
+      "description": "Busca resumo de vendas de serviços por mês",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "month",
+          "value": "2024-01-01",
+          "description": "Mês de referência no formato YYYY-MM-DD"
+        }
+      ],
+      "headers": [
+        {
+          "name": "sessiontoken",
+          "value": "{{ sessiontoken }}"
+        },
+        {
+          "name": "company",
+          "value": "{{ company }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 4000000000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_fidelidade",
+      "parentId": "wrk_1234567890abcdef",
+      "modified": 1732998300000,
+      "created": 1732998300000,
+      "name": "Fidelidade",
+      "description": "Endpoints relacionados a dados de fidelidade de clientes",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 5000000000000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_get_fidelidade",
+      "parentId": "fld_fidelidade",
+      "modified": 1732998300000,
+      "created": 1732998300000,
+      "url": "{{ base_url }}/api/fidelidade",
+      "name": "GET Fidelidade",
+      "description": "Busca dados de fidelidade de clientes por mês",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "month",
+          "value": "2024-01-01",
+          "description": "Mês de referência no formato YYYY-MM-DD"
+        }
+      ],
+      "headers": [
+        {
+          "name": "sessiontoken",
+          "value": "{{ sessiontoken }}"
+        },
+        {
+          "name": "company",
+          "value": "{{ company }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 5000000000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    }
+  ]
+}
