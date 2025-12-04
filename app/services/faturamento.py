@@ -12,13 +12,13 @@ import decimal
 from helpers.api import get_payments, get_sales, get_stock_by_month, get_bills
 
 days = [
-    "1 - Segunda",
-    "2 - Terça",
-    "3 - Quarta",
-    "4 - Quinta",
-    "5 - Sexta",
-    "6 - Sábado",
-    "7 - Domingo",
+    "Segunda",
+    "Terça",
+    "Quarta",
+    "Quinta",
+    "Sexta",
+    "Sábado",
+    "Domingo",
 ]
 
 periods = {
@@ -79,7 +79,7 @@ def get_faturamento_data(
                     expenses += payment.value
 
     return {
-        "daily": {day: daily.get(day, 0) for day in [*days[1:], days[0]]},
+        "daily": {day: daily.get(day, 0) for day in days},
         "by_payment_methods": by_payment_methods,
         "by_periods": by_period,
         "receitas": revenues,
