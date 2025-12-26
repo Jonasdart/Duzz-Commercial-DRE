@@ -1,14 +1,15 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Header, Request
 from datetime import date
-from typing import Dict
+from typing import Annotated, Dict
 
-from app.services.produtos import buscar_produtos
-from app.models.responses import ProdutosSuccessResponse, ErrorResponse
+from models import CommonHeaders
+from services.produtos import buscar_produtos
+from models.responses import ProdutosSuccessResponse, ErrorResponse
 
 router = APIRouter()
 
 @router.get("/produtos", response_model=ProdutosSuccessResponse)
-def get_produtos(request: Request, month: date):
+def get_produtos(request: Request, month: date, headers: Annotated[CommonHeaders, Header()]):
     """
     Endpoint to fetch product sales summary for a given month.
 
@@ -20,12 +21,11 @@ def get_produtos(request: Request, month: date):
         ProdutosSuccessResponse: Standardized response with product sales data.
     """
     try:
-        headers = getattr(request.state, 'auth_headers', None)
         produtos_data = buscar_produtos(month, headers)
         
         return ProdutosSuccessResponse(
             message="Product sales data retrieved successfully",
-            data={"products": produtos_data}
+            data=produtos_data
         )
     except Exception as e:
         raise HTTPException(

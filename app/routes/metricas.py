@@ -1,13 +1,14 @@
-from fastapi import APIRouter, HTTPException, Request
+from typing import Annotated
+from fastapi import APIRouter, HTTPException, Request, Header
 from datetime import date
-
-from app.services.metricas import calcular_metricas
-from app.models.responses import MetricasCalculadasSuccessResponse, ErrorResponse
+from services.metricas import calcular_metricas
+from models.responses import MetricasCalculadasSuccessResponse, ErrorResponse
+from models import CommonHeaders
 
 router = APIRouter()
 
 @router.get("/metricas", response_model=MetricasCalculadasSuccessResponse)
-def get_metricas_calculadas(request: Request, month: date):
+def get_metricas_calculadas(request: Request, month: date, headers: Annotated[CommonHeaders, Header()]):
     """
     Endpoint to fetch all calculated business metrics for a given month.
 
@@ -18,10 +19,8 @@ def get_metricas_calculadas(request: Request, month: date):
     Returns:
         MetricasCalculadasSuccessResponse: Standardized response with all calculated metrics.
     """
-    try:
-        headers = getattr(request.state, 'auth_headers', None)
-        metricas_data = calcular_metricas(month, headers)
-        
+    try:        
+        metricas_data = calcular_metricas(month, headers)        
         return MetricasCalculadasSuccessResponse(
             message="Calculated metrics retrieved successfully",
             data=metricas_data

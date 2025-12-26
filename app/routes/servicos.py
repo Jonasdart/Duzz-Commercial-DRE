@@ -1,13 +1,15 @@
-from fastapi import APIRouter, HTTPException, Request
+from typing import Annotated
+from fastapi import APIRouter, HTTPException, Header, Request
 from datetime import date
 
-from app.services.servicos import buscar_servicos
-from app.models.responses import ServicosSuccessResponse, ErrorResponse
+from models import CommonHeaders
+from services.servicos import buscar_servicos
+from models.responses import ServicosSuccessResponse, ErrorResponse
 
 router = APIRouter()
 
 @router.get("/servicos", response_model=ServicosSuccessResponse)
-def get_servicos(request: Request, month: date):
+def get_servicos(request: Request, month: date, headers: Annotated[CommonHeaders, Header()]):
     """
     Endpoint to fetch service sales summary for a given month.
 
@@ -19,12 +21,11 @@ def get_servicos(request: Request, month: date):
         ServicosSuccessResponse: Standardized response with service sales data.
     """
     try:
-        headers = getattr(request.state, 'auth_headers', None)
         servicos_data = buscar_servicos(month, headers)
         
         return ServicosSuccessResponse(
             message="Service sales data retrieved successfully",
-            data={"services": servicos_data}
+            data=servicos_data
         )
     except Exception as e:
         raise HTTPException(

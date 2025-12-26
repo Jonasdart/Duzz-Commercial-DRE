@@ -3,9 +3,11 @@ import calendar
 from typing import List, Dict
 
 from helpers.api import get_stock_by_month
+from models import CommonHeaders
+from models.responses import ProdutosResponse
 from models.stocks import Stock
 
-def buscar_produtos(month: date, headers: tuple) -> Dict[int, int]:
+def buscar_produtos(month: date, headers: CommonHeaders) -> ProdutosResponse:
     """
     Fetch product sales summary for a given month.
 
@@ -16,7 +18,7 @@ def buscar_produtos(month: date, headers: tuple) -> Dict[int, int]:
     Returns:
         Dict[int, int]: A dictionary with product IDs as keys and quantities sold as values.
     """
-    stocks: List[Stock] = get_stock_by_month(month, headers)
+    stocks: List[Stock] = get_stock_by_month(month, headers.get_tuple())
     resumo = {}
 
     for stock in stocks:
@@ -33,4 +35,4 @@ def buscar_produtos(month: date, headers: tuple) -> Dict[int, int]:
                 except KeyError:
                     resumo[move.product_id] = move.amount
 
-    return resumo
+    return ProdutosResponse(products=resumo)

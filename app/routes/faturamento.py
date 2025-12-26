@@ -1,13 +1,14 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Header, Request
 from datetime import date
-from typing import Dict
-from app.services.faturamento import get_faturamento_data, buscar_faturamento
-from app.models.responses import FaturamentoSuccessResponse, ErrorResponse
+from typing import Annotated
+from models import CommonHeaders
+from services.faturamento import buscar_faturamento
+from models.responses import FaturamentoSuccessResponse, ErrorResponse
 
 router = APIRouter()
 
 @router.get("/faturamento", response_model=FaturamentoSuccessResponse)
-def get_faturamento_data_endpoint(request: Request, month: date):
+def get_faturamento_data_endpoint(request: Request, month: date, headers: Annotated[CommonHeaders, Header()]):
     """
     Endpoint to fetch faturamento data for a given month.
 
@@ -19,7 +20,6 @@ def get_faturamento_data_endpoint(request: Request, month: date):
         FaturamentoSuccessResponse: Standardized response with faturamento data.
     """
     try:
-        headers = getattr(request.state, 'auth_headers', None)
         faturamento_data = buscar_faturamento(month, headers)
         
         return FaturamentoSuccessResponse(
