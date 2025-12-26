@@ -1,5 +1,5 @@
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP # Importar ROUND_HALF_UP
 from typing import Dict
 from models import CommonHeaders
 
@@ -8,14 +8,13 @@ from services.faturamento import buscar_faturamento
 def calcular_metricas(month: date, headers: CommonHeaders) -> Dict:
     """
     Calculate all business metrics from faturamento data.
-    
-    Args:
-        month (date): The month to fetch data for.
-        headers (tuple): Authentication headers.
-
-    Returns:
-        Dict: Dictionary with all calculated metrics.
     """
+    # Helper para forçar 2 casas decimais sempre
+    def to_money(value):
+        if value is None:
+            return Decimal('0.00')
+        return value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
     # Get raw faturamento data
     fact = buscar_faturamento(month, headers)
 
@@ -24,31 +23,49 @@ def calcular_metricas(month: date, headers: CommonHeaders) -> Dict:
     despesas_totais = fact.despesas + fact.cmv
     
     # Calculate main metrics
-    lucro_liquido = (receita_menos_descontos - despesas_totais).quantize(Decimal('0.01'))
-    receitas_menos_despesas = (receita_menos_descontos - fact.despesas).quantize(Decimal('0.01'))
+    lucro_liquido = to_money(receita_menos_descontos - despesas_totais)
+    receitas_menos_despesas = to_money(receita_menos_descontos - fact.despesas)
     
-    # Calculate percentages and ratios
-    lucro_liquido_percent = (lucro_liquido / fact.receitas * 100).quantize(Decimal('0.01')) if fact.receitas > 0 else Decimal('0')
-    receitas_menos_despesas_percent = (receitas_menos_despesas / fact.despesas * 100).quantize(Decimal('0.01')) if fact.despesas > 0 else Decimal('0')
+    # Calculate percentages and ratios (Multiplica por 100 ANTES de arredondar)
+    lucro_liquido_percent = Decimal('0.00')
+    if receita_menos_descontos > 0:
+        lucro_liquido_percent = to_money(lucro_liquido / receita_menos_descontos * 100)
+        
+    receitas_menos_despesas_percent = Decimal('0.00')
+    if receita_menos_descontos > 0:
+        receitas_menos_despesas_percent = to_money(receitas_menos_despesas / receita_menos_descontos * 100)
     
     # Calculate ticket metrics
-    ticket_medio = (receita_menos_descontos / fact.vendas).quantize(Decimal('0.01')) if fact.vendas > 0 else Decimal('0')
-    custo_ticket = (fact.despesas / fact.vendas).quantize(Decimal('0.01')) if fact.vendas > 0 else Decimal('0')
+    ticket_medio = Decimal('0.00')
+    if fact.vendas > 0:
+        ticket_medio = to_money(receita_menos_descontos / fact.vendas)
+
+    custo_ticket = Decimal('0.00')
+    if fact.vendas > 0:
+        custo_ticket = to_money(fact.despesas / fact.vendas)
     
-    # Calculate ticket percentages (using the same logic as frontend)
-    ticket_medio_percent = round(
-        (ticket_medio / custo_ticket) if custo_ticket > 0 else Decimal('0')
-    )
-    custo_ticket_percent = round(
-        (custo_ticket / ticket_medio) * 100 if ticket_medio > 0 else Decimal('0')
-    )
+    # Calculate ticket percentages
+    # Substituído round() por to_money() para manter padrão Decimal
+    ticket_medio_percent = Decimal('0.00')
+    if custo_ticket > 0:
+        ticket_medio_percent = to_money(ticket_medio / custo_ticket * 100)
+
+    custo_ticket_percent = Decimal('0.00')
+    if ticket_medio > 0:
+        custo_ticket_percent = to_money(custo_ticket / ticket_medio * 100)
     
     # Calculate other percentages
-    descontos_sobre_receita = fact.descontos.quantize(Decimal('0.01'))
-    descontos_sobre_receita_percent = (fact.descontos / fact.receitas * 100).quantize(Decimal('0.01')) if fact.receitas > 0 else Decimal('0')
+    descontos_sobre_receita = to_money(fact.descontos)
     
-    cmv_sobre_receita = lucro_bruto = (receita_menos_descontos - fact.cmv).quantize(Decimal('0.01'))
-    cmv_sobre_receita_percent = (fact.cmv / receita_menos_descontos * 100).quantize(Decimal('0.01')) if receita_menos_descontos > 0 else Decimal('0')
+    descontos_sobre_receita_percent = Decimal('0.00')
+    if fact.receitas > 0:
+        descontos_sobre_receita_percent = to_money(fact.descontos / fact.receitas * 100)
+    
+    cmv_sobre_receita = to_money(fact.cmv)
+    
+    cmv_sobre_receita_percent = Decimal('0.00')
+    if receita_menos_descontos > 0:
+        cmv_sobre_receita_percent = to_money(fact.cmv / receita_menos_descontos * 100)
     
     return {
         "lucro_liquido": {
